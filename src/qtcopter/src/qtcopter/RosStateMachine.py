@@ -25,10 +25,10 @@ class RosStateMachine(StateMachine):
         else:
             self.__camera = camera
 
-        if optical_flow is None:
-            self.__optical_flow = OpticalFlow.from_ros()
-        else:
-            self.__optical_flow = optical_flow
+        #if optical_flow is None:
+        #    self.__optical_flow = OpticalFlow.from_ros()
+        #else:
+        #    self.__optical_flow = optical_flow
 
         self.__config_max_height = rospy.get_param('config/max_height')
 
@@ -101,7 +101,7 @@ class RosStateMachine(StateMachine):
         u.height_msg = kwargs['range_msg']
         u.max_height = self.__config_max_height
         u.camera = self.__camera
-        u.optical_flow = self.__optical_flow
+        #u.optical_flow = self.__optical_flow
         try:
             u.image = self.__bridge.imgmsg_to_cv2(kwargs['image_msg'],
                                                   desired_encoding='bgr8')

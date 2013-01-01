@@ -90,7 +90,7 @@ class PTGreyNode:
 
 if __name__ == '__main__':
     node = PTGreyNode()
-    rate = rospy.get_param('/cv/hz')
+    rate = rospy.get_param('/cv/hz', 5)
     rate = rospy.Rate(rate)
     while not rospy.is_shutdown():
         node.publish_info()
