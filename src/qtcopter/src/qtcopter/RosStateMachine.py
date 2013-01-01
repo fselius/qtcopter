@@ -5,7 +5,8 @@ from qtcopter.msg import controller_msg
 from message_filters import ApproximateTimeSynchronizer, Subscriber
 import rospy
 import tf
-
+import traceback
+import numpy as np
 
 class RosStateMachine(StateMachine):
     def __init__(self, states, transitions, start, outcomes, camera=None,
@@ -71,7 +72,14 @@ class RosStateMachine(StateMachine):
         self.__debug_pub.publish(img_msg)
 
     def publish_delta(self, x, y, z, theta):
-        rospy.loginfo('Publish delta: x {0}, y {1}, z {2}, theta {3}'
+        if np.isnan(x):
+            # TODO: Fix this
+            rospy.logerr('Publish delta : Got bad x: {0}'.format(x))
+            #print 'BAD X?', x, repr(x)
+            #traceback.print_stack()
+            return
+        x, y = -x, -y
+        rospy.loginfo('Publish delta : x {0}, y {1}, z {2}, theta {3}'
                       .format(x, y, z, theta))
         q = tf.transformations.quaternion_from_euler(0, 0, theta)
         # TODO: camera frame (down/forward)
@@ -83,8 +91,8 @@ class RosStateMachine(StateMachine):
                                        camera_frame)
         # TODO: remove legacy topic publish
         msg = controller_msg()
-        msg.x = x
-        msg.y = y
+        msg.x = -y
+        msg.y = x
         msg.z = z
         msg.t = theta
         #self.__pid_input_pub.publish(msg)

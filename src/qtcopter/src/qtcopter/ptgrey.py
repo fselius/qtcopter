@@ -149,6 +149,7 @@ if __name__=='__main__':
     parser = argparse.ArgumentParser(description='Find gain and threshold for balldrop.')
     parser.add_argument('--shutter', default=10, type=float, help='shutter time [ms] (10 ms default for indoor, 1-2 ms is fine for outside)')
     parser.add_argument('--gain', default=0, type=float, help='gain (-5-20~, default 0)')
+    parser.add_argument('--snap', action='store_true', help='save one pic')
     args = parser.parse_args()
 
     c = PTGreyCamera()
@@ -174,16 +175,22 @@ if __name__=='__main__':
     c.print_infos()
 
     c.start_capture()
-    while True:
-        t = time()
-        f = c.get_frame()
-        t = time()-t
-        print '%.3fs, %.2f fps' % (t, 1/t)
-        try:
-            pass
-            show_img(f, wait=False)
-        except KeyboardInterrupt:
-            break
+    if args.snap:
+        x = c.get_frame()
+        show_img(x)
+
+        cv2.imwrite('test.jpg', x)
+    else:
+        while True:
+            t = time()
+            f = c.get_frame()
+            t = time()-t
+            print '%.3fs, %.2f fps' % (t, 1/t)
+            try:
+                pass
+                show_img(f, wait=False)
+            except KeyboardInterrupt:
+                break
 
     c.stop_capture()
 

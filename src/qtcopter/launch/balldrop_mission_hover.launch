@@ -1,6 +1,6 @@
 <launch>
   <!-- Mission node -->
-  <node pkg="qtcopter" type="balldrop" name="balldrop_mission_hover" output="screen" />
+  <node pkg="qtcopter" type="balldrop_hover" name="balldrop_mission_hover" output="screen" />
 
   <!-- Mission configuration -->
   <rosparam ns="target">
@@ -31,12 +31,12 @@
     <!-- Configuration for polarity find algo. -->
     threshold: 100
 
-	<!-- mission location -->
-	mission_site:
-	  <!-- relative to forward -->
-	  offset: [0, -5, 0]
+    <!-- mission location -->
+    mission_site:
+      <!-- relative to forward -->
+      offset: [0, -5, 0]
   </rosparam>
   <rosparam ns="cv">
-    hz: 18
+    hz: 4
   </rosparam>
 </launch>

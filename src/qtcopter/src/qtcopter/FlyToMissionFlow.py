@@ -24,6 +24,8 @@ class FlyToMissionFlow:
  
     def __call__(self, userdata, output):
         # TODO: publish deltas, decrease offset and return
+        if self.__offset is None:
+            return 'mission site reached'
         # 'on way to mission site'
         if not self.__sent_delta:
             x, y, z = self.__offset

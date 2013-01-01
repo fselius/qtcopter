@@ -29,7 +29,7 @@ def show_img(img):
 
 if __name__=='__main__':
     parser = argparse.ArgumentParser(description='Find gain and threshold for balldrop.')
-    parser.add_argument('--shutter', default=10, type=int, help='shutter time (10 ms default for indoor, 1-2 ms is fine for outside)')
+    parser.add_argument('--shutter', default=10, type=float, help='shutter time (10 ms default for indoor, 1-2 ms is fine for outside)')
     parser.add_argument('--output', '-o', help='save map to file')
     parser.add_argument('--show', action='store_true', help='show result map')
     args = parser.parse_args()
@@ -84,7 +84,12 @@ if __name__=='__main__':
     good_gains = np.array(good_gains, dtype=np.uint8)
     good_gains[good_gains==1] = 255
     for i, gain in enumerate(gains):
-        print 'gain:', gain, 'good:', sum(good_gains[:,i])/255
+        x = np.average(np.nonzero(good_gains[:,i]))
+        good = sum(good_gains[:,i])/255
+        if good:
+            print 'gain:', gain, 'good:', good, 'avg:', x, thresholds[int(x)]
+        else:
+            print 'gain:', gain, 'good:', good
 
     ratio = 500./max(good_gains.shape)
     good_gains = cv2.resize(good_gains, (0, 0), None, ratio, ratio)

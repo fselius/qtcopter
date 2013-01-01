@@ -79,9 +79,10 @@ class ScanFind:
         ratio = 1.*image.shape[0]/orig_shape[0]
 
         center, radius = self.find_circles(image)
+        print 'center:', repr(center)
         if center is None:
             return (None, None)
-        return (center[0]/ratio, center[1]/ratio), radius/ratio
+        return (float(center[0])/ratio, float(center[1])/ratio), float(radius)/ratio
 
     def find_circles(self, image):
         image = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
