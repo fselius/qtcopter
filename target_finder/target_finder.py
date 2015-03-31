@@ -27,7 +27,7 @@ def find_target(image_path):
 
         t1 = 10
         t2 = 3*t1
-        logging.info('Detecting edges with t1=%f, t2=%f.')
+        logging.info('Detecting edges with t1=%f, t2=%f.' % (t1, t2))
         edges = cv2.Canny(blur_image, threshold1=t1, threshold2=t2)
 
         logging.info('Detecting contours.')
