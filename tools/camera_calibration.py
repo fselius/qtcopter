@@ -35,6 +35,7 @@ def calibrate_camera(get_image, pattern_shape, square_size, error_threshold):
     camera_matrix = None
     dist_coeffs = None
 
+    cv2.namedWindow('Camera calibration', cv2.WINDOW_NORMAL)
     while True:
         success, image = get_image()
         if not success or image is None:
@@ -66,25 +67,46 @@ def calibrate_camera(get_image, pattern_shape, square_size, error_threshold):
             logging.warning('User pressed key, exiting early.')
             return
 
+    cv2.destroyWindow('Camera calibration')
     print('Final error: %f' % error)
     print('Camera matrix:')
     print(camera_matrix)
     print('Distortions:')
     print(dist_coeffs)
+    return (camera_matrix, dist_coeffs)
+
+
+def show_undistorted(get_image, camera_matrix, dist_coeffs):
+    cv2.namedWindow('Undistorted camera image', cv2.WINDOW_NORMAL)
+    while True:
+        success, image = get_image()
+        if not success or image is None:
+            logging.info('Could not get an image, exiting.')
+            break
+
+        image = cv2.undistort(image, camera_matrix, dist_coeffs)
+
+        cv2.imshow('Undistorted camera image', image)
+        key = cv2.waitKey(1)
+        if key == 113:  # 'q'
+            logging.warning('User pressed key, exiting early.')
+            return
 
 
 if __name__ == '__main__':
     parser = ArgumentParser()
-    group = parser.add_mutually_exclusive_group()
-    group.add_argument('--camera-id',
-                       help='ID of the attached camera for OpenCV',
-                       default=0)
-    group.add_argument('--images',
-                       nargs='+',
-                       help='Paths to images to use as input for calibration')
+    parser.add_argument('--camera-id',
+                        help='ID of the attached camera for OpenCV',
+                        type=int,
+                        default=0)
+    parser.add_argument('--images',
+                        nargs='+',
+                        help='Paths to images to use as input for calibration')
     parser.add_argument('--pattern-shape',
                         help='Inner corners of the used chessboard pattern',
                         default=(9, 6))
+    parser.add_argument('-s', '--show-undistorted',
+                        action='store_true')
     parser.add_argument('--square-size',
                         help='Size of a square of the chessboard pattern',
                         default=1.0)
@@ -105,5 +127,8 @@ if __name__ == '__main__':
         image_callback = open_images(args.images)
     else:
         image_callback = open_camera(args.camera_id)
-    calibrate_camera(image_callback, args.pattern_shape,
-                     args.square_size, args.error_threshold)
+    camera_matrix, dist_coeffs = calibrate_camera(image_callback, args.pattern_shape,
+                                                  args.square_size, args.error_threshold)
+
+    if args.show_undistorted:
+        show_undistorted(open_camera(args.camera_id), camera_matrix, dist_coeffs)
