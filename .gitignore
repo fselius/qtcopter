@@ -1,2 +1,6 @@
 # Exuberant Ctags files
 /tags
+
+# ROS
+/build
+/devel
