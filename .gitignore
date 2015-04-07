@@ -1,2 +1,9 @@
 # Exuberant Ctags files
 /tags
+
+# ROS
+/build
+/devel
+
+# Python bytecode
+*.pyc
