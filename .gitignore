@@ -4,3 +4,6 @@
 # ROS
 /build
 /devel
+
+# Python bytecode
+*.pyc

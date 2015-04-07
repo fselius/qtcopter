@@ -4,7 +4,7 @@ project(qcopter)
 ## Find catkin macros and libraries
 ## if COMPONENTS list like find_package(catkin REQUIRED COMPONENTS xyz)
 ## is used, also find other catkin packages
-find_package(catkin REQUIRED)
+find_package(catkin REQUIRED COMPONENTS rospy)
 
 ## System dependencies are found with CMake's conventions
 # find_package(Boost REQUIRED COMPONENTS system)
@@ -13,7 +13,7 @@ find_package(catkin REQUIRED)
 ## Uncomment this if the package has a setup.py. This macro ensures
 ## modules and global scripts declared therein get installed
 ## See http://ros.org/doc/api/catkin/html/user_guide/setup_dot_py.html
-# catkin_python_setup()
+catkin_python_setup()
 
 ################################################
 ## Declare ROS messages, services and actions ##
@@ -146,11 +146,20 @@ catkin_package(
 ## Testing ##
 #############
 
-## Add gtest based cpp test target and link libraries
-# catkin_add_gtest(${PROJECT_NAME}-test test/test_qcopter.cpp)
-# if(TARGET ${PROJECT_NAME}-test)
-#   target_link_libraries(${PROJECT_NAME}-test ${PROJECT_NAME})
-# endif()
+if(CATKIN_ENABLE_TESTING)
+  ## Add gtest based cpp test target and link libraries
+  # catkin_add_gtest(${PROJECT_NAME}-test test/test_qcopter.cpp)
+  # if(TARGET ${PROJECT_NAME}-test)
+  #   target_link_libraries(${PROJECT_NAME}-test ${PROJECT_NAME})
+  # endif()
 
-## Add folders to be run by python nosetests
-# catkin_add_nosetests(test)
+  ## Unit tests
+  catkin_add_nosetests(test/unit)
+
+  ## Integration tests (ROS environment)
+  find_package(rostest)
+  file(GLOB integration_tests test/integration/*.launch)
+  foreach(test ${integration_tests})
+    add_rostest("${test}")
+  endforeach()
+endif()
