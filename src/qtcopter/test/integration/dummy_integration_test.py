@@ -4,7 +4,7 @@
 Dummy integration test.
 """
 
-PKG = 'qcopter'
+PKG = 'qtcopter'
 NAME = 'dummy_test'
 
 import rospy
@@ -12,7 +12,7 @@ import rostest
 import sys
 import unittest
 
-import qcopter
+import qtcopter
 
 class DummyTest(unittest.TestCase):
     def dummy_test(self):

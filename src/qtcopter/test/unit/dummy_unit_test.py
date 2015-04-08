@@ -2,7 +2,7 @@
 Dummy unit test.
 """
 
-import qcopter
+import qtcopter
 
 def test_true():
     print('Successful dummy test!')

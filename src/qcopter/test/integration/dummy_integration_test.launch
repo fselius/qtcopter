@@ -1,3 +1,0 @@
-<launch>
-  <test test-name="dummy_test" pkg="qcopter" type="dummy_integration_test.py" />
-</launch>
