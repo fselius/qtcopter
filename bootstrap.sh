@@ -2,8 +2,10 @@
 # This file will be run after each update,
 # so a step must not fail if performed twice!
 
-# TODO: graphical environment, auto-login
+# TODO: graphical environment
+#       auto-login
 #       prompt to set Git user/email
+#       shortcuts on desktop
 
 set -e
 
@@ -25,11 +27,15 @@ if [[ -z "${ROS_DISTRO}" ]]; then
   source ~/.bashrc
 fi
 
-# Set up Gito repo and ROS workspace.
-if [[ "${ROS_PACKAGE_PATH}" != "${HOME}/catkin_ws"* ]]; then
+# Set up Gito repo.
+if [[ ! -d ~/catkin_ws ]]; then
   eval "$(ssh-agent -s)"
   ./ssh/add_key.sh
   git clone ssh://git@github.com/fselius/qtcopter ~/catkin_ws
+fi
+
+# Set up ROS workspace.
+if [[ "${ROS_PACKAGE_PATH}" != "${HOME}/catkin_ws"* ]]; then
   cd ~/catkin_ws
   catkin_make
   echo "source ~/catkin_ws/devel/setup.bash" >> ~/.bashrc
