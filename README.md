@@ -1,40 +1,27 @@
 # qtcopter
 
-## Directory Structure
+## Files
 
     build/            ROS build directory (not committed to Git repository)
     devel/            ROS devel directory (not committed to Git repository)
     src/              ROS sources
         qtcopter      Mission nodes & launchfiles for real missions; implementation
         qtcopter_sim  Mission nodes & launchfiles for simulation
+    ssh/              SSH keys to access the private Github repo
+    bootstrap.sh      Install/update required software on an Ubuntu 14.04 system
+    update.sh         Update the repository and required software
+    Vagrantfile       Initial creation of the Virtualbox image
 
 ## Developer Quickstart
 
-1. [Install ROS][install-ros].
-2. Set up this repository as ROS workspace:
+If you are already running Ubuntu 14.04 (Trusty), you can execute `bootstrap.sh` to set everything up for you.
 
-  ```
-  $ git clone --recursive https://github.com/fselius/qtcopter.git ~/catkin_ws
-  $ cd ~/catkin_ws
-  $ catkin_make
-  ```
+To get a virtual machine with ROS etc, install [Vagrant][vagrant] and run `vagrant up` in this directory.
 
-3. Set up your environment for this new workspace (Bash example):
+To run the tests in `src/qtcopter/test`:
 
-  ```
-  $ echo "source ~/catkin_ws/devel/setup.bash" >> ~/.bashrc
-  $ source ~/.bashrc
-  ```
-4. Check that the environment is set up correctly by trying to run an executable:
+```
+$ catkin_make run_tests
+```
 
-  ```
-  $ rosrun qtcopter calibrate_camera.py
-  ```
-5. To run the tests in `src/qtcopter/test`:
-
-  ```
-  $ catkin_make run_tests
-  ```
-
-
-[install-ros]: http://wiki.ros.org/indigo/Installation/Ubuntu
+[vagrant]: https://www.vagrantup.com/

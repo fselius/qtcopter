@@ -7,3 +7,6 @@
 
 # Python bytecode
 *.pyc
+
+# Vagrant
+/.vagrant
