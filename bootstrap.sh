@@ -1,13 +1,9 @@
-#!/usr/bin/env bash
-# This file will be run after each update,
-# so a step must not fail if performed twice!
+#!/bin/bash -e
 
-# TODO: graphical environment
-#       auto-login
-#       prompt to set Git user/email
-#       shortcuts on desktop
+# This will run when the Vagrant VM is initially provisioned (i.e. set up).
+# Can also be used to set up a non-VM Ubuntu Trusty for ROS.
 
-set -e
+cd "${HOME}/catkin_ws"
 
 # Keep system up to date, install prerequisites.
 sudo apt-get update
@@ -23,21 +19,40 @@ if [[ -z "${ROS_DISTRO}" ]]; then
 
   sudo rosdep init
   rosdep update
-  echo "source /opt/ros/indigo/setup.bash" >> ~/.bashrc
-  source ~/.bashrc
-fi
-
-# Set up Gito repo.
-if [[ ! -d ~/catkin_ws ]]; then
-  eval "$(ssh-agent -s)"
-  ./ssh/add_key.sh
-  git clone ssh://git@github.com/fselius/qtcopter ~/catkin_ws
+  echo "source /opt/ros/indigo/setup.bash" >> ~/.bash_profile
+  source ~/.bash_profile
 fi
 
 # Set up ROS workspace.
-if [[ "${ROS_PACKAGE_PATH}" != "${HOME}/catkin_ws"* ]]; then
-  cd ~/catkin_ws
+if [[ "${ROS_PACKAGE_PATH}" != "${HOME}/catkin_ws/src:"* ]]; then
+  rm -rf build devel
   catkin_make
-  echo "source ~/catkin_ws/devel/setup.bash" >> ~/.bashrc
-  source ~/.bashrc
+  echo "source ~/catkin_ws/devel/setup.bash" >> ~/.bash_profile
+  source ~/.bash_profile
 fi
+
+if ! grep -q "~/.bash_profile" ~/.bashrc; then
+  cat >> ~/.bashrc <<EOS
+if [ -f ~/.bash_profile ]; then
+    . ~/.bash_profile
+fi
+EOS
+fi
+
+# If not executed from GUI, install one.
+# Make sure to not install anything on a non-Vagrant Ubuntu.
+if [[ -z "${DISPLAY}" && ! -d /etc/lightdm && "$(whoami)" = vagrant ]]; then
+  sudo apt-get install -y xfce4 virtualbox-guest-x11 lightdm xubuntu-icon-theme xubuntu-default-settings
+  sudo mkdir /etc/lightdm/lightdm.conf.d
+  cat > /tmp/50-qtcopter.conf <<EOS
+[SeatDefaults]
+user-session=xfce
+autologin-user=vagrant
+autologin-user-timeout=delay
+EOS
+  sudo mv /tmp/50-qtcopter.conf /etc/lightdm/lightdm.conf.d/50-qtcopter.conf
+  echo "Restart the VM to get a GUI."
+fi
+
+# Clean package cache.
+sudo apt-get clean
