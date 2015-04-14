@@ -1,12 +1,31 @@
 #!/usr/bin/env python
+'''
+Use histogram to locate target
+
+for IMG_0527.JPG, target is at 220, 330 -> 280, 390
+
+'''
 
 import sys
 import os
+import argparse
+import time
+
 import cv2
 import pylab
-import time
 import numpy as np
 
+# constants
+INPUT_WIDTH = 500
+RECT_SIZE_X = 40
+RECT_SIZE_Y = 40
+RECT_OVERLAP_X = 20
+RECT_OVERLAP_Y = 20 
+
+
+
+
+########
 # dummy @profile decorator
 import __builtin__
 
@@ -17,17 +36,7 @@ except AttributeError:
     def profile(func): return func
     __builtin__.profile = profile
 
-
-
-img_path = './IMG_0527.JPG'
-channel = 2
-if len(sys.argv) < 1:
-	print 'Usage: %s <image> [channel (HLS)=2]' % (sys.argv[0],)
-	sys.exit(1)
-if len(sys.argv) > 1:
-	img_path = sys.argv[1]
-if len(sys.argv) > 2:
-	channel = int(sys.argv[2])
+#########
 
 @profile
 def find_edges(hist, cut=0.05):
@@ -125,93 +134,88 @@ def hist_iter_rects(channel, rect_width, rect_height, overlap_x, overlap_y):
 		if is_black_white(hist):
 			yield x, y
 
-# open image
-img = cv2.imread(img_path)
-if img is None:
-	print "Could not open file %s" % (img_path,)
-	sys.exit(-1)
+def main():
+    parser = argparse.ArgumentParser(description='Find balldrop target using histogram')
+    parser.add_argument('images', nargs='+', help='input images')
+    parser.add_argument('--view', action='store_true', help='view results')
+    #parser.add_argument('--save', '-s', action='store_true', help='save results to IMG.target.jpg')
+    parser.add_argument('--channel', '-c', default=2, type=int, help='channel (HLS) number to use')
+    parser.add_argument('--verbose', '-v', action='count')
+    parser.add_argument('--benchmark', action='store_true', help='run some benchmarks instead')
 
-t = time.time()
+    args = parser.parse_args()
+    for img_path in args.images: 
+        # open image
+        img = cv2.imread(img_path)
+        if img is None:
+            print "Could not open file %s" % (img_path,)
+            continue
 
-# resize to have maximum 500px width/height
-ratio = 500./max(img.shape[:2])
-img = cv2.resize(img, (0,0), fx=ratio, fy=ratio)
-img_orig = img
+        t = time.time()
 
-# convert to HLS
-img =  cv2.cvtColor(img, cv2.COLOR_BGR2HLS)
+        # resize to have maximum 500px width/height
+        ratio = 1.0*INPUT_WIDTH/max(img.shape[:2])
+        img = cv2.resize(img, (0,0), fx=ratio, fy=ratio)
+        img_orig = img
 
-# take only the relevant channel (we probably want light)
-channels = cv2.split(img)
-img_channel = channels[channel]
-# for Hue the ranges are 0-179. Saturate & Light are 0-255.
-if channel == 0:
-	max_value = 179
-else:
-	max_value = 255
+        # convert to HLS
+        img = cv2.cvtColor(img, cv2.COLOR_BGR2HLS)
 
-# calc hist
-rect_width = 40
-rect_height = 40
-overlap_x = 20
-overlap_y = 20
+        # take only the relevant channel (we probably want light)
+        channels = cv2.split(img)
+        img_channel = channels[args.channel]
 
-#cv2.imshow('bah', img)
-#while True:
-#	if cv2.waitKey(1) == ord('q'):
-#		break
-'''
-t = time.time()
-for i in range(1):
-	#hist = hist_rect(img_channel, 220, 330, 40, 40, max_value=max_value)
-	hist = hist_rect(img_channel, 0, 0, None, None, max_value=max_value)
-print 'hist:', time.time()-t
+        # for Hue the ranges are 0-179. Saturate & Light are 0-255.
+        if args.channel == 0:
+                max_value = 179
+        else:
+                max_value = 255
 
-t = time.time()
-for i in range(1000):
-	x = is_black_white(hist)
-print 'is_black_white:', time.time()-t
-'''
+        # just run a benchmark if requested
+        if args.benchmark:
+            print 'Benchmark on %s' % (img_path,)
+            N = 1000
+            t = time.time()
+            for i in range(N):
+                    #hist = hist_rect(img_channel, 220, 330, 40, 40, max_value=max_value)
+                    hist = hist_rect(img_channel, 0, 0, None, None, max_value=max_value)
+            print 'hist:', (time.time()-t)/N
 
+            N = 1000
+            t = time.time()
+            for i in range(N):
+                    x = is_black_white(hist)
+            print 'is_black_white:', (time.time()-t)/N
+            continue
+            
+        # calc hist
+        rect_width = RECT_SIZE_X
+        rect_height = RECT_SIZE_Y
+        overlap_x = RECT_OVERLAP_X
+        overlap_y = RECT_OVERLAP_Y
 
-for x, y in hist_iter_rects(img_channel, rect_width, rect_height, overlap_x, overlap_y):
-	# draw a rectangle around found qrcodes
-	print x, y
-	pts = [[x, y], [x+rect_width, y], [x+rect_width, y+rect_height], [x, y+rect_width]]
-	#pts = [[y, x], [y, x+rect_width], [y+rect_height, x+rect_width], [y+rect_width, x]]
+        for x, y in hist_iter_rects(img_channel, rect_width, rect_height, overlap_x, overlap_y):
+            # draw a rectangle around found qrcodes
+            if args.verbose > 1:
+                print x, y
+            pts = [[x, y], [x+rect_width, y], [x+rect_width, y+rect_height], [x, y+rect_width]]
+            #pts = [[y, x], [y, x+rect_width], [y+rect_height, x+rect_width], [y+rect_width, x]]
 
-
-	poly1 = np.array(pts, np.int32) #.reshape((-1,1,2))
-	polys = [poly1]
-	cv2.polylines(img_orig, polys, True, (0, 0, 255))
-
-
-print 'time:', time.time()-t
-cv2.imshow('bah', img_orig)
-while True:
-	if cv2.waitKey(1) == ord('q'):
-		break
-#hist = cv2.calcHist([img_channel], [0], None, dims, ranges)
-#hist = hist_rect(img_channel, 0, 0, None, None, max_value=max_value)
-
-# for IMG_0527.JPG, target is at 220, 330 -> 280, 390
-#hist = hist_rect(img_channel, 220, 330, 60, 60, max_value=max_value)
-#print hist
-#print is_black_white(hist)
-
-# print the histogram
-#pylab.plot(hist)
-#pylab.show()
+            poly1 = np.array(pts, np.int32) #.reshape((-1,1,2))
+            polys = [poly1]
+            cv2.polylines(img_orig, polys, True, (0, 0, 255))
 
 
-# equalize histogram
-# actually, this takes away a lot of information. so we won't do this.
-'''channel = cv2.equalizeHist(channel)
-hist = cv2.calcHist([channel], [0], None, [32], [0,256])
+        if args.verbose > 0:
+            print '%fs for %s' % (time.time()-t, img_path)
+        if args.view:
+            cv2.imshow('bah', img_orig)
+            while True:
+                if cv2.waitKey(1)&0xff == ord('q'):
+                    break
+                
+            cv2.destroyWindow('bah')
 
-print hist
-print hist[0], hist[-1], (1.0*hist[0]+hist[-1])/sum(hist)
-pylab.plot(hist)
-pylab.show()
-'''
+if __name__=='__main__':
+    main()
 
