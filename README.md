@@ -1,40 +1,40 @@
 # qtcopter
 
-## Directory Structure
+## Files
 
-    build/            ROS build directory (not committed to Git repository)
-    devel/            ROS devel directory (not committed to Git repository)
-    src/              ROS sources
-        qtcopter      Mission nodes & launchfiles for real missions; implementation
-        qtcopter_sim  Mission nodes & launchfiles for simulation
+    build/              ROS build directory (not committed to Git repository)
+    devel/              ROS devel directory (not committed to Git repository)
+    src/                ROS sources
+        qtcopter        Mission nodes & launchfiles for real missions; implementation
+        qtcopter_sim    Mission nodes & launchfiles for simulation
+    ssh/                SSH keys to access the private Github repo
+    bootstrap.sh        Install/update required software on an Ubuntu 14.04 system
+    update_qtcopter.sh  Update script for non-Vagrant VMs - do not execute!
+    export_vm.sh        Export a VM for non-developers
+    Vagrantfile         Configuration for Vagrant
 
 ## Developer Quickstart
 
-1. [Install ROS][install-ros].
-2. Set up this repository as ROS workspace:
+If you are already running Ubuntu 14.04 (Trusty), you can execute `bootstrap.sh` to set everything up for you.
 
-  ```
-  $ git clone --recursive https://github.com/fselius/qtcopter.git ~/catkin_ws
-  $ cd ~/catkin_ws
-  $ catkin_make
-  ```
+To use an Ubuntu on a virtual machine, install [Vagrant][vagrant] and run `vagrant up` in this directory. The first time, this will install and set up ROS. To stop the machine, run `vagrant halt`.
 
-3. Set up your environment for this new workspace (Bash example):
+To run the tests in `src/qtcopter/test` (within the VM):
 
-  ```
-  $ echo "source ~/catkin_ws/devel/setup.bash" >> ~/.bashrc
-  $ source ~/.bashrc
-  ```
-4. Check that the environment is set up correctly by trying to run an executable:
+```
+$ cd ~/catkin_ws
+$ catkin_make run_tests
+```
 
-  ```
-  $ rosrun qtcopter calibrate_camera.py
-  ```
-5. To run the tests in `src/qtcopter/test`:
+To export the VM for non-developers:
 
-  ```
-  $ catkin_make run_tests
-  ```
+```
+$ ./export_vm.sh
+```
 
+## User Quickstart
 
-[install-ros]: http://wiki.ros.org/indigo/Installation/Ubuntu
+Obtain a VM image from the developers and start it in [VirtualBox][virtualbox]. Username and password are both `vagrant`. Each time you want to update the Qtcopter code, run `update_qtcopter.sh` from the Desktop.
+
+[vagrant]: https://www.vagrantup.com/
+[virtualbox]: https://www.virtualbox.org/
