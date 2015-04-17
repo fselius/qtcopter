@@ -11,6 +11,7 @@ class RcMessage:
     __MID_VAL = 1500
     __MAXIMUM_VAL = 2000
     __rcChannels = None
+    __THROTTLE_ARM_VALUE = 1000
 
     def __init__(self):
         self.__rcChannels = OverrideRCIn().channels
@@ -31,6 +32,10 @@ class RcMessage:
     def BalanceRcChannels(self):
         for channel in self.__rcChannels:
             channel = self.__MID_VAL
+
+    def PrepareForArming(self):
+        self.BalanceRcChannels()
+        self.SetThrottle(self.__THROTTLE_ARM_VALUE)
 
     def SetRoll(self, value):
         self.__rcChannels[ChannelName.Roll] = value
