@@ -2,7 +2,8 @@
 '''
 Use histogram to locate target
 
-for IMG_0527.JPG, target is at 220, 330 -> 280, 390
+for IMG_0527.JPG, target is at 330, 220 -> 390, 280
+center at 360, 250
 
 '''
 
@@ -139,7 +140,7 @@ def main():
     parser.add_argument('images', nargs='+', help='input images')
     parser.add_argument('--view', action='store_true', help='view results')
     #parser.add_argument('--save', '-s', action='store_true', help='save results to IMG.target.jpg')
-    parser.add_argument('--channel', '-c', default=2, type=int, help='channel (HLS) number to use')
+    parser.add_argument('--channel', '-c', default=1, type=int, help='channel (HLS) number to use')
     parser.add_argument('--verbose', '-v', action='count')
     parser.add_argument('--benchmark', action='store_true', help='run some benchmarks instead')
 
