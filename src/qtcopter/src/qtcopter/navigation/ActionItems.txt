@@ -1,1 +1,8 @@
-Test
+Action Items:
+1. Understand how to work with PID module
+2. Decide if we work with callbacks (push) or serialized loop (pull)
+3. Add a logger module
+4. Add a configuration module. Should read files and parse to JSON?
+5. CurrentState class to wrap current state data (get heading, altitude etc... instead of going to the topic or service, use a function)
+6. Change FlightMode class to Controller? AI? Navigator?
+7.
