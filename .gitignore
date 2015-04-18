@@ -4,6 +4,7 @@
 # ROS
 /build
 /devel
+/src/CMakeLists.txt
 
 # Python bytecode
 *.pyc
