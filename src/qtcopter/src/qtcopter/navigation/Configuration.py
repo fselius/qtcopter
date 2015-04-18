@@ -56,7 +56,6 @@ class Configuration:
                 raise e
 
 
-conf = Configuration('NavConfig.json')
 #
 # Usage example:
 # Create Configuration object with NavConfig.json file
