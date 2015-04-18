@@ -56,6 +56,7 @@ class Configuration:
                 raise e
 
 
+
 #
 # Usage example:
 # Create Configuration object with NavConfig.json file
