@@ -19,7 +19,7 @@ if __name__ == '__main__':
     rospy.loginfo('Publishing {0} to {1}'.format(args.range, args.topic))
 
     rospy.init_node('rangepub', anonymous=True)
-    pub = rospy.Publisher(args.topic, Range, queue_size=10)
+    pub = rospy.Publisher(args.topic, Range, queue_size=1)
     range_msg = Range()
     range_msg.range = args.range
 

@@ -23,7 +23,7 @@ if __name__ == '__main__':
     cv_image = cv2.imread(args.image, cv2.CV_LOAD_IMAGE_COLOR)
 
     rospy.init_node('imagepub', anonymous=True)
-    pub = rospy.Publisher(args.topic, Image, queue_size=10)
+    pub = rospy.Publisher(args.topic, Image, queue_size=1)
 
     bridge = CvBridge()
     image = bridge.cv2_to_imgmsg(cv_image, 'bgr8')
