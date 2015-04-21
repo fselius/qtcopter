@@ -1,8 +1,38 @@
 #!/usr/bin/env python2
 
+import rospy
+import smach
+import smach_ros
+from qtcopter.missions.balldrop import CoarseFind, DetailedFind
+
 """
 ROS node for balldrop mission.
 """
 
+
+class BalldropMission(smach.State):
+    def __init__(self, name='balldrop_mission'):
+        rospy.init_node(name)
+
+        self.sm = smach.StateMachine(outcomes=['mission successful',
+                                               'mission aborted'])
+        with self.sm:
+            smach.StateMachine.add('CoarseFind', CoarseFind(),
+                                   transitions={'succeeded': 'DetailedFind',
+                                                'aborted': 'mission aborted'})
+            smach.StateMachine.add('DetailedFind', DetailedFind(),
+                                   transitions={'failed': 'CoarseFind',
+                                                'succeeded': 'mission successful',
+                                                'aborted': 'mission aborted'})
+        self.sis = smach_ros.IntrospectionServer(name, self.sm, '/SM_ROOT')
+        self.sis.start()
+        rospy.loginfo('Initialized BalldropMission node.')
+
+    def execute(self):
+        rospy.loginfo('Executing BalldropMission.')
+        self.sm.execute()
+        self.sis.stop()
+
 if __name__ == '__main__':
-    print('TODO')
+    mission = BalldropMission()
+    mission.execute()
