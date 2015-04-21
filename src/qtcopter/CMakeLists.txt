@@ -9,6 +9,8 @@ find_package(catkin
   rospy
   sensor_msgs
   message_generation
+  geometry_msgs
+  smach
 )
 
 ## System dependencies are found with CMake's conventions
