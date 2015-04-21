@@ -18,8 +18,8 @@ def main():
     parser.add_argument('--pixel_height', '-hh', default=1, type=int, help='height of the image in pixels')
     parser.add_argument('--x_pixel', '-x', default=1, type=int, help='location in image in pixels')
     parser.add_argument('--y_pixel', '-y', default=1, type=int, help='location in image in pixels')
-    parser.add_argument('--x_offset', '-xos', default=1, type=float, help='location of objects')
-    parser.add_argument('--y_offset', '-yos', default=1, type=float, help='location of object')
+    parser.add_argument('--x_offset', '-xos', default=0, type=float, help='location of objects offset from the camera')
+    parser.add_argument('--y_offset', '-yos', default=0, type=float, help='location of object offset from the camera')
 
 
 
