@@ -1,0 +1,30 @@
+#!/usr/bin/env python2
+
+'''
+Publish a sensor_msgs/Range to a topic.
+'''
+
+import rospy
+import argparse
+from sensor_msgs.msg import Range
+
+if __name__ == '__main__':
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument('topic')
+    parser.add_argument('range', type=float)
+    parser.add_argument('-r', '--rate', type=float, default=60)
+
+    args = parser.parse_args(rospy.myargv()[1:])
+
+    rospy.loginfo('Publishing {0} to {1}'.format(args.range, args.topic))
+
+    rospy.init_node('rangepub', anonymous=True)
+    pub = rospy.Publisher(args.topic, Range, queue_size=10)
+    range_msg = Range()
+    range_msg.range = args.range
+
+    rate = rospy.Rate(args.rate)
+    while not rospy.is_shutdown():
+        range_msg.header.stamp = rospy.Time.now()
+        pub.publish(range_msg)
+        rate.sleep()

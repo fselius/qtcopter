@@ -1,0 +1,5 @@
+<launch>
+  <node pkg="qtcopter_sim" type="rangepub" name="publish_height" args="/height 3.0 -r 50" />
+  <node pkg="qtcopter_sim" type="imagepub" name="publish_image" args="/image $(find qtcopter_sim)/images/target.jpg -r 50" />
+  <node pkg="qtcopter" type="balldrop" name="balldrop_mission" output="screen" />
+</launch>
