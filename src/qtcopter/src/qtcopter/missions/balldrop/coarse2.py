@@ -1,10 +1,7 @@
 #!/usr/bin/env python
 '''
-Use histogram to locate target
-
 for IMG_0527.JPG, target is at 330, 220 -> 390, 280
 center at 360, 250
-
 '''
 
 import sys
@@ -41,99 +38,99 @@ except AttributeError:
 
 @profile
 def find_edges(hist, cut=0.05):
-    """ find edges of histogram (for the black-white case). Usually, the
-    colors will be either over exposed (white is white, black is gray),
-    or under exposed (white is gray, black is black).
-    We find actual edges, rather than doing a histogram equalization, which
-    isn't exactly what we want, and it takes away the beautiful peaks that
-    we would like to find.
-    
-    hist - histogram
-    cut - how much we want to cut of the histogram (cut from each side)
-    """
-    
-    total = hist.sum()
-    #print type(cut), type(total), cut, total
-    #print hist[:10]
-    cut = np.float32(cut*float(total))
-    #cut = cut*total
-    # find low edge
-    
-    sums = hist.cumsum()
-    i = np.argmax(sums>cut)
-    low = max(0, i-1) # if i < 0..
+	""" find edges of histogram (for the black-white case). Usually, the
+	colors will be either over exposed (white is white, black is gray),
+	or under exposed (white is gray, black is black).
+	We find actual edges, rather than doing a histogram equalization, which
+	isn't exactly what we want, and it takes away the beautiful peaks that
+	we would like to find.
+	
+	hist - histogram
+	cut - how much we want to cut of the histogram (cut from each side)
+	"""
+	
+	total = hist.sum()
+	#print type(cut), type(total), cut, total
+	#print hist[:10]
+	cut = np.float32(cut*float(total))
+	#cut = cut*total
+	# find low edge
+	
+	sums = hist.cumsum()
+	i = np.argmax(sums>cut)
+	low = max(0, i-1) # if i < 0..
 
-    i = np.argmax(sums>(total-cut))
-    high = min(len(hist)-1, i+1) # if i >= len(hist)
+	i = np.argmax(sums>(total-cut))
+	high = min(len(hist)-1, i+1) # if i >= len(hist)
 
-    return low, high
+	return low, high
 
 @profile
 def is_black_white(hist):
-    " decide whether histogram is of black/white pattern "
-    low, high = find_edges(hist)    
-    #print 'low, high, total hist length:', low, high, len(hist)
+	" decide whether histogram is of black/white pattern "
+	low, high = find_edges(hist)	
+	#print 'low, high, total hist length:', low, high, len(hist)
 
-    #hist = hist[low:high+1]
+	#hist = hist[low:high+1]
 
-    # take lower and upper % buckets (darkest + lightest), if they
-    # contain more than threshold, good
-    BUCKETS = 0.05 # precentage of lower and upper
-    THRESHOLD = 0.5 # how much these buckets should have
+	# take lower and upper % buckets (darkest + lightest), if they
+	# contain more than threshold, good
+	BUCKETS = 0.05 # precentage of lower and upper
+	THRESHOLD = 0.5 # how much these buckets should have
 
-    buckets = int(BUCKETS*(high-low+1))
-    #buckets = int(BUCKETS*len(hist))
-    # TODO: in case BUCKETS*len(hist) is not a whole, should we take part
-    # of the next bucket as well?
-    sides_sum = hist[low:low+buckets].sum() + hist[high-buckets:high+1].sum()
-    #sides_sum = sum(hist[:buckets]) + sum(hist[-buckets:])
-    #print 'low:', 1.0*sum(hist[:buckets])/sum(hist), 'high:', 1.0*sum(hist[-buckets:])/sum(hist), 'total:', 1.0*sides_sum/sum(hist)
-    #if 1.0*sides_sum/sum(hist) > THRESHOLD:
-    return 1.0*sides_sum/hist[low:high+1].sum() > THRESHOLD
-    #return 1.0*sides_sum > hist[low:high+1].sum()*THRESHOLD
+	buckets = int(BUCKETS*(high-low+1))
+	#buckets = int(BUCKETS*len(hist))
+	# TODO: in case BUCKETS*len(hist) is not a whole, should we take part
+	# of the next bucket as well?
+	sides_sum = hist[low:low+buckets].sum() + hist[high-buckets:high+1].sum()
+	#sides_sum = sum(hist[:buckets]) + sum(hist[-buckets:])
+	#print 'low:', 1.0*sum(hist[:buckets])/sum(hist), 'high:', 1.0*sum(hist[-buckets:])/sum(hist), 'total:', 1.0*sides_sum/sum(hist)
+	#if 1.0*sides_sum/sum(hist) > THRESHOLD:
+	return 1.0*sides_sum/hist[low:high+1].sum() > THRESHOLD
+	#return 1.0*sides_sum > hist[low:high+1].sum()*THRESHOLD
 
 @profile
 def hist_rect(channel, x=0, y=0, width=None, height=None, max_value=255):
-    " calculate histogram in rectangle "
-    ranges = [0, max_value+1]
-    dims = [max_value+1]
+	" calculate histogram in rectangle "
+	ranges = [0, max_value+1]
+	dims = [max_value+1]
 
-    # defaults
-    if width is None:
-        width = channel.shape[1]-x
-    if height is None:
-        height = channel.shape[0]-y
-    
-    # create mask of pixels we want to calc histogram of
-    mask = np.zeros(channel.shape, dtype=np.uint8)
-    mask[y:y+height, x:x+width] = np.ones((width, height))
-    # calc histogram :)
-    hist = cv2.calcHist([channel], [0], mask, dims, ranges)
-    return hist.reshape(hist.size) # return a flat array
+	# defaults
+	if width is None:
+		width = channel.shape[1]-x
+	if height is None:
+		height = channel.shape[0]-y
+	
+	# create mask of pixels we want to calc histogram of
+	mask = np.zeros(channel.shape, dtype=np.uint8)
+	mask[y:y+height, x:x+width] = np.ones((width, height))
+	# calc histogram :)
+	hist = cv2.calcHist([channel], [0], mask, dims, ranges)
+	return hist.reshape(hist.size) # return a flat array
 
 def iter_rect(x, y, width, height, rect_width, rect_height, overlap_x, overlap_y):
-    " generate rectangle coordinates "
-    i=0
-    # TODO: Currently we don't handle cases when right\bottom edge isn't
-    # at round boundary (i.e. not multiple of rect_width-overlap_x)
-    # we should probably also yield last row/column end the end to check
-    # these edges.
-    for row in range(x, width-rect_width, rect_width-overlap_x):
-        for col in range(y, height-rect_height, rect_height-overlap_y):
-            yield row, col, rect_width, rect_height
-            i+=1
-    print 'loops:', i
+	" generate rectangle coordinates "
+	i=0
+	# TODO: Currently we don't handle cases when right\bottom edge isn't
+	# at round boundary (i.e. not multiple of rect_width-overlap_x)
+	# we should probably also yield last row/column end the end to check
+	# these edges.
+	for row in range(x, width-rect_width, rect_width-overlap_x):
+		for col in range(y, height-rect_height, rect_height-overlap_y):
+			yield row, col, rect_width, rect_height
+			i+=1
+	print 'loops:', i
 
 @profile
 def hist_iter_rects(channel, rect_width, rect_height, overlap_x, overlap_y):
-    " iterate over good rectangles "
-    # TODO: perhaps rewrite with filter()
-    it_rects = iter_rect(0, 0, channel.shape[1], channel.shape[0],
-            rect_width, rect_height, overlap_x, overlap_y)
-    for x, y, width, height in it_rects:
-        hist = hist_rect(channel, x, y, width, height, max_value=255)
-        if is_black_white(hist):
-            yield x, y
+	" iterate over good rectangles "
+	# TODO: perhaps rewrite with filter()
+	it_rects = iter_rect(0, 0, channel.shape[1], channel.shape[0],
+			rect_width, rect_height, overlap_x, overlap_y)
+	for x, y, width, height in it_rects:
+		hist = hist_rect(channel, x, y, width, height, max_value=255)
+		if is_black_white(hist):
+			yield x, y
 
 def main():
     parser = argparse.ArgumentParser(description='Find balldrop target using histogram')
@@ -148,6 +145,10 @@ def main():
     for img_path in args.images: 
         # open image
         img = cv2.imread(img_path)
+
+        orig_width  = len(img)
+        orig_height = len(img[0])
+
         if img is None:
             print "Could not open file %s" % (img_path,)
             continue
@@ -195,6 +196,13 @@ def main():
         overlap_x = RECT_OVERLAP_X
         overlap_y = RECT_OVERLAP_Y
 
+        roi = np.zeros((orig_width,orig_height))
+        
+        xratio = 1.0*orig_width/len(img)
+        yratio = 1.0*orig_height/len(img[0])
+        
+        print xratio,yratio
+
         for x, y in hist_iter_rects(img_channel, rect_width, rect_height, overlap_x, overlap_y):
             # draw a rectangle around found qrcodes
             if args.verbose > 1:
@@ -205,12 +213,23 @@ def main():
             poly1 = np.array(pts, np.int32) #.reshape((-1,1,2))
             polys = [poly1]
             cv2.polylines(img_orig, polys, True, (0, 0, 255))
+            
+            X = x*xratio
+            Y = y*yratio
 
+            RECT_WIDTH = rect_width*xratio
+            RECT_HEIGHT = rect_height*yratio
+
+            def roee_is_the_king(X,Y,RECT_WIDTH,RECT_HEIGHT,roi): #all args should be in original coordinates
+                roi[Y:Y+RECT_HEIGHT, X:X+RECT_WIDTH] = np.ones((rect_width, rect_height))
+            roee_is_the_king(X,Y,RECT_WIDTH,RECT_HEIGHT,roi) #all args should be in original coordinates
+
+        print roi
 
         if args.verbose > 0:
             print '%fs for %s' % (time.time()-t, img_path)
         if args.view:
-            cv2.imshow('bah', img_orig)
+            cv2.imshow('bah', roi)
             while True:
                 if cv2.waitKey(1)&0xff == ord('q'):
                     break
@@ -219,4 +238,3 @@ def main():
 
 if __name__=='__main__':
     main()
-
