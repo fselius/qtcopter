@@ -6,13 +6,14 @@ import rospy
 from mavros.msg import OverrideRCIn
 from mavros.srv import CommandBool
 from mavros.srv import SetMode
+from rospy.core import rospydebug
 from RcMessage import RcMessage
 from mavros.msg import State
 
 #FlightMode class : encapsulates all mode related operations of the drone
 #To be further implemented
 
-class FlightMode:
+class Navigator:
     __rcMessage = None
     __armingService = None
     __setModeService = None
@@ -25,6 +26,7 @@ class FlightMode:
         self.__setModeService = rospy.ServiceProxy('/mavros/set_mode',SetMode)
         self.__armingService = rospy.ServiceProxy('/mavros/cmd/arming', CommandBool)
         self.__rcOverrideTopic = rospy.Publisher('/mavros/rc/override',OverrideRCIn,queue_size = 10) #TBD : how to determine queue size
+        self.__rcOverrideListener = rospy.Subscriber('/mavros/rc/override',OverrideRCIn,self.__HumanOverrideCallback)
         self.__rcMessage = RcMessage()
 
     #Arm: arm/disarm the drone
@@ -34,7 +36,7 @@ class FlightMode:
         #self.__rcMessage.ResetRcChannels()
         #self.__rcMessage.SetThrottle(1000) #Set throttle to low speed so we can arm
         self.__rcMessage.PrepareForArming()
-        self.__rcOverrideTopic.publish(self.__rcMessage.GetRcMessage())
+        self.PublishRCMessage(self.__rcMessage.GetRcMessage())
         time.sleep(1) #TBD : is this necessary? need to check if topic was grabbed
         try:
             return self.__armingService(armDisarmBool)
@@ -48,7 +50,7 @@ class FlightMode:
         return State(rospy.wait_for_message('/mavros/state', State, timeout=1)).mode
 
     #SetCurrentMode : set the current mode of flight
-    #param : mode - the requested mode of flight
+    #param : mode - the requested mode of flight as string
     #return value : success/failure
     def SetCurrentMode(self, mode):
         return self.__setModeService(base_mode=0, custom_mode=mode)
@@ -62,6 +64,14 @@ class FlightMode:
         self.__rcMessage.SetYaw(yaw)
         self.__rcOverrideTopic.publish(self.__rcMessage.GetRcMessage())
         time.sleep(1) #TBD : further investigate if really needed
+
+    #PublishRCMessage : publish new message to rc/override topic to set rc channels
+    #params : RcMessage object with all channels set
+    def PublishRCMessage(self, rcMessage):
+        self.__rcOverrideTopic.publish(rcMessage)
+
+    def __HumanOverrideCallback(self, msg):
+        msg.
 
 
 

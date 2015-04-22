@@ -3,7 +3,7 @@
 
 
 import rospy
-from qtcopter import controller_msg, uav_msg
+from qtcopter.msg import controller_msg, uav_msg
 from threading import Thread
 from PIDModule import PIDModule
 from PIDModule import PIDController
@@ -37,7 +37,6 @@ class PIDManager:
         msg.Y = self.AxisControllers["Y"].GetFix()
         msg.Theta = self.AxisControllers["Theta"].GetFix()
         return msg
-
 
 if __name__ == '__main__':
     try:

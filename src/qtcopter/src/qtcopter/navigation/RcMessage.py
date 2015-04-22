@@ -5,13 +5,14 @@ from mavros.msg import OverrideRCIn
 
 class ChannelName:
     Roll, Pitch, Throttle, Yaw = range(4)
+    HumanOverrideChannel = 7
 
 class RcMessage:
     __MINIMUM_VAL = 1000
     __MID_VAL = 1500
     __MAXIMUM_VAL = 2000
-    __rcChannels = None
     __THROTTLE_ARM_VALUE = 1000
+    __rcChannels = None
 
     def __init__(self):
         self.__rcChannels = OverrideRCIn().channels
@@ -24,14 +25,14 @@ class RcMessage:
         return msg
 
     def ResetRcChannels(self):
-        for channel in self.__rcChannels:
-            channel = OverrideRCIn.CHAN_NOCHANGE
+        for i in range(0,6):
+            self.__rcChannels[i] = OverrideRCIn.CHAN_NOCHANGE
 
     #set all rc_channels with mid value
     #TBD : fix issue with this for loop
     def BalanceRcChannels(self):
-        for channel in self.__rcChannels:
-            channel = self.__MID_VAL
+        for i in range(0,6):
+            self.__rcChannels[i] = self.__MID_VAL
 
     def PrepareForArming(self):
         self.BalanceRcChannels()
@@ -60,6 +61,9 @@ class RcMessage:
 
     def GetRoll(self):
         return self.__rcChannels[ChannelName.Yaw]
+
+    def GetHumanOverride(self):
+        return self.__rcChannels[ChannelName.HumanOverrideChannel]
 
 
 
