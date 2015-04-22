@@ -12,15 +12,15 @@ from ..Configuration import Configuration
 config = Configuration("PidConfig.json")
 
 class PIDManager:
-    def __init__(self):
+    def __init__(self, dt, minLimit, maxLimit):
         xConfig = config.GetConfigurationSection("X")
         yConfig = config.GetConfigurationSection("Y")
         zConfig = config.GetConfigurationSection("Z")
         thetaConfig = config.GetConfigurationSection("Theta")
-        self.AxisControllers = {"X": PIDController(xConfig["KP"], xConfig["KI"], xConfig["KD"]),
-                                "Y": PIDController(yConfig["KP"], yConfig["KI"], yConfig["KD"]),
-                                "Z": PIDController(zConfig["KP"], zConfig["KI"], zConfig["KD"]),
-                                "Theta": PIDController(thetaConfig["KP"], thetaConfig["KI"], thetaConfig["KD"])
+        self.AxisControllers = {"X": PIDController(xConfig["KP"], xConfig["KI"], xConfig["KD"], dt, minLimit, maxLimit),
+                                "Y": PIDController(yConfig["KP"], yConfig["KI"], yConfig["KD"], rate, minLimit, maxLimit),
+                                "Z": PIDController(zConfig["KP"], zConfig["KI"], zConfig["KD"], rate, minLimit, maxLimit),
+                                "Theta": PIDController(thetaConfig["KP"], thetaConfig["KI"], thetaConfig["KD"], rate, minLimit, maxLimit)
                                 }
         rospy.Subscriber("/ip/error", controller_msg, self.DataCollector)
 
@@ -42,9 +42,9 @@ if __name__ == '__main__':
     try:
         rospy.init_node('pid_node', anonymous=True)
         pid_publisher = rospy.Publisher('/pid/controller_command',controller_msg,queue_size=25)
-        pidManager = PIDManager()
         config = Configuration("PidConfig.json")
         generalConfig = config.GetConfigurationSection("General")
+        pidManager = PIDManager(generalConfig["Rate"], generalConfig["MinLimit"], generalConfig["MaxLimit"])
         rate = rospy.Rate(generalConfig["Rate"])
         while not rospy.is_shutdown():
             fix = pidManager.Run()

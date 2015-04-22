@@ -7,19 +7,30 @@
 
 
 class PIDController:
-    def __init__(self, kp, kd, ki, dt):
+    def __init__(self, kp, kd, ki, dt, maxLimit, minLimit):
         self.kp = kp
         self.kd = kd
         self.ki = ki
         self.dt = dt
         self.integral = 0
+        self.MaxLimit = maxLimit
+        self.MinLimit = minLimit
 
     def SetError(self, error):
         self.error = error
 
     def GetFix(self):
         self.integral += self.ki*self.error
-        return self.kp*self.error + self.integral + self.kd*self.error/self.dt
+        if self.integral > self.MaxLimit:
+            self.integral = self.MaxLimit
+        elif self.integral < self.MinLimit:
+            self.integral = self.MinLimit
+        output = self.kp*self.error + self.integral + self.kd*self.error/self.dt
+        if output > self.MaxLimit:
+            output = self.MaxLimit
+        elif output < self.MinLimit:
+            output = self.MinLimit
+        return output
 
 
 
