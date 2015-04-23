@@ -12,6 +12,7 @@ class RcMessage:
     __MID_VAL = 1500
     __MAXIMUM_VAL = 2000
     __THROTTLE_ARM_VALUE = 1000
+    __HUMAN_OVERRIDE_VALUE = 1000
     __rcChannels = None
 
     def __init__(self):
@@ -37,6 +38,7 @@ class RcMessage:
     def PrepareForArming(self):
         self.BalanceRcChannels()
         self.SetThrottle(self.__THROTTLE_ARM_VALUE)
+        self.SetHumanOverride(self.__HUMAN_OVERRIDE_VALUE)
 
     def SetRoll(self, value):
         self.__rcChannels[ChannelName.Roll] = value
@@ -49,6 +51,9 @@ class RcMessage:
 
     def SetYaw(self, value):
         self.__rcChannels[ChannelName.Yaw] = value
+
+    def SetHumanOverride(self, value):
+        self.__rcChannels[ChannelName.HumanOverrideChannel] = value
 
     def GetRoll(self):
         return self.__rcChannels[ChannelName.Roll]
