@@ -71,7 +71,6 @@ class Navigator:
         self.__rcMessage.SetThrottle(throttle)
         self.__rcMessage.SetYaw(yaw)
         self.__rcOverrideTopic.publish(self.__rcMessage.GetRcMessage())
-        time.sleep(1) #TBD : further investigate if really needed
 
     #PublishRCMessage : publish new message to rc/override topic to set rc channels
     #params : RcMessage object with all channels set
