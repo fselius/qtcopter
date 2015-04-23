@@ -13,4 +13,9 @@
             ],
         "Boolean":true
     }
+
+    "params":{
+      "HumanOverrideChannel":7,
+      "HumanOverrideDefault":1000
+    }
 }
