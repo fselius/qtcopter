@@ -9,20 +9,26 @@ from mavros.srv import SetMode
 from rospy.core import rospydebug
 from RcMessage import RcMessage
 from mavros.msg import State
+from Configuration import Configuration
 
+config = Configuration("NavConfig.json")
 #FlightMode class : encapsulates all mode related operations of the drone
 #To be further implemented
-
 class Navigator:
     __rcMessage = None
     __armingService = None
     __setModeService = None
     __rcOverrideTopic = None
+    __humanOverrideFlag = False
+    __humanOverrideDefault = None
+    __navigatorParams = None
 
     #Register to all needed topics/services for this object
     #init a RcMessage as a member for this class, to be able to control whats published
-    #on the rc/override topic'''
+    #on the rc/override topic
     def __init__(self):
+        self.__navigatorParams = Configuration.GetConfigurationSection("params")
+        self.__humanOverrideDefault = self.__navigatorParams["HumanOverrideDefault"]
         self.__setModeService = rospy.ServiceProxy('/mavros/set_mode',SetMode)
         self.__armingService = rospy.ServiceProxy('/mavros/cmd/arming', CommandBool)
         self.__rcOverrideTopic = rospy.Publisher('/mavros/rc/override',OverrideRCIn,queue_size = 10) #TBD : how to determine queue size
@@ -33,8 +39,6 @@ class Navigator:
     #param : armDisarmBool - true for arm, false for disarm
     #return value : success/failure
     def Arm(self, armDisarmBool):
-        #self.__rcMessage.ResetRcChannels()
-        #self.__rcMessage.SetThrottle(1000) #Set throttle to low speed so we can arm
         self.__rcMessage.PrepareForArming()
         self.PublishRCMessage(self.__rcMessage.GetRcMessage())
         time.sleep(1) #TBD : is this necessary? need to check if topic was grabbed
@@ -58,6 +62,10 @@ class Navigator:
     #PublishRCMessage : publish new message to rc/override topic to set rc channels
     #params : roll, pitch, throttle, yaw as integer values between 1000 to 2000
     def PublishRCMessage(self, roll, pitch, throttle, yaw):
+        if not self.__humanOverrideFlag:
+            print "Human override channel activated, publish disabled"
+            #TBD: define logger behavior here
+            return False
         self.__rcMessage.SetRoll(roll)
         self.__rcMessage.SetPitch(pitch)
         self.__rcMessage.SetThrottle(throttle)
@@ -68,11 +76,17 @@ class Navigator:
     #PublishRCMessage : publish new message to rc/override topic to set rc channels
     #params : RcMessage object with all channels set
     def PublishRCMessage(self, rcMessage):
+        if not self.__humanOverrideFlag:
+            print "Human override channel activated, publish disabled"
+            #TBD: define logger behavior here
+            return False
         self.__rcOverrideTopic.publish(rcMessage)
 
-    def __HumanOverrideCallback(self, msg):
-        msg.
-
+    #HumanOverrideCallback : Constantly checking rc/override HumanOverride channel and maintaining a
+    #bolean flag according to that
+    def __HumanOverrideCallback(self, data):
+        if not data.channels[self.__navigatorParams["HumanOverrideChannel"]] == self.__humanOverrideDefault:
+            self.__humanOverrideFlag = False
 
 
 
