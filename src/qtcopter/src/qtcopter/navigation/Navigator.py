@@ -88,7 +88,7 @@ class Navigator:
     #IsPublishAllowed : Make all safety checks in this method.
     #return value : True/False according to all safety checks.
     def __IsPublishAllowed(self):
-        if not self.__humanOverrideFlag and (time.time() - self.__humanOverrideElapsedTime < 2):
+        if not self.__humanOverrideFlag or (time.time() - self.__humanOverrideElapsedTime > 2):
             print "Human override channel activated, publish disabled"
             #TBD: define logger behavior here
             return False
