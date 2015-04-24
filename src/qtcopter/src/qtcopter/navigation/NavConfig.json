@@ -16,6 +16,7 @@
 
     "params":{
       "HumanOverrideChannel":7,
-      "HumanOverrideDefault":1000
+      "HumanOverrideDefault":1000,
+      "HumanOverrideThreshold":50
     }
 }
