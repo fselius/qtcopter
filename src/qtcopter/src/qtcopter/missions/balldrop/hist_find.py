@@ -15,14 +15,31 @@ import time
 import cv2
 import pylab
 import numpy as np
+from math import ceil
+
 
 # constants
 INPUT_WIDTH = 500
-RECT_SIZE_X = 40
-RECT_SIZE_Y = 40
-RECT_OVERLAP_X = 20
-RECT_OVERLAP_Y = 20 
+RATIO_INPUT_TO_RECT = 1.0/20
+RATIO_RECT_TO_OVERLAP = 1.0/2
 
+RECT_SIZE_X = int(ceil(INPUT_WIDTH*RATIO_INPUT_TO_RECT))
+RECT_SIZE_Y = int(ceil(INPUT_WIDTH*RATIO_INPUT_TO_RECT))
+RECT_OVERLAP_X = int(ceil(RECT_SIZE_X*RATIO_RECT_TO_OVERLAP))
+RECT_OVERLAP_Y = int(ceil(RECT_SIZE_Y*RATIO_RECT_TO_OVERLAP))
+if False:
+    INPUT_WIDTH = 500
+    RECT_SIZE_X = 40
+    RECT_SIZE_Y = 40
+    RECT_OVERLAP_X = 20
+    RECT_OVERLAP_Y = 20 
+if False:
+    # smaller picture
+    INPUT_WIDTH = 100
+    RECT_SIZE_X = 10
+    RECT_SIZE_Y = 10
+    RECT_OVERLAP_X = 4
+    RECT_OVERLAP_Y = 4 
 
 
 
@@ -53,16 +70,15 @@ def find_edges(hist, cut=0.05):
     """
     
     total = hist.sum()
-    #print type(cut), type(total), cut, total
-    #print hist[:10]
     cut = np.float32(cut*float(total))
-    #cut = cut*total
+    #cut = cut*total # slower..
+
     # find low edge
-    
     sums = hist.cumsum()
     i = np.argmax(sums>cut)
     low = max(0, i-1) # if i < 0..
 
+    # find high edge
     i = np.argmax(sums>(total-cut))
     high = min(len(hist)-1, i+1) # if i >= len(hist)
 
@@ -122,19 +138,62 @@ def iter_rect(x, y, width, height, rect_width, rect_height, overlap_x, overlap_y
         for col in range(y, height-rect_height, rect_height-overlap_y):
             yield row, col, rect_width, rect_height
             i+=1
-    print 'loops:', i
+    #print 'loops:', i
 
 @profile
-def hist_iter_rects(channel, rect_width, rect_height, overlap_x, overlap_y):
+def hist_iter_rects(channel,rect_width, rect_height, overlap_x, overlap_y, hist_filter=is_black_white):
     " iterate over good rectangles "
     # TODO: perhaps rewrite with filter()
     it_rects = iter_rect(0, 0, channel.shape[1], channel.shape[0],
             rect_width, rect_height, overlap_x, overlap_y)
     for x, y, width, height in it_rects:
         hist = hist_rect(channel, x, y, width, height, max_value=255)
-        if is_black_white(hist):
+        if hist_filter(hist):
             yield x, y
 
+def roi_hist(channel, hist_filter=is_black_white,
+            resize=500, # None to not resize
+            ratio_size_to_rect=RATIO_INPUT_TO_RECT,
+            ratio_rect_to_overlap=RATIO_RECT_TO_OVERLAP):
+    " return ROI where hist_filter() returns true "
+    original_shape = channel.shape
+
+    if resize is not None:
+        # resize
+        ratio = 1.0*resize/max(channel.shape[:2])
+        channel = cv2.resize(channel, (0,0), fx=ratio, fy=ratio)
+
+    # make rectangle size
+    height, width = channel.shape # TODO: make sure this is the order
+    rect_size_x = int(ceil(width*ratio_size_to_rect))
+    rect_size_y = int(ceil(height*ratio_size_to_rect))
+    rect_overlap_x = int(ceil(rect_size_x*ratio_rect_to_overlap))
+    rect_overlap_y = int(ceil(rect_size_y*ratio_rect_to_overlap))
+
+    # calculate small roi
+    roi = roi_hist_ex(channel, hist_filter,
+                    rect_size_x, rect_size_y, rect_overlap_x, rect_overlap_y)
+    
+    if resize is not None:
+        # resize roi
+        roi = cv2.resize(roi, original_shape)
+    return roi
+
+def roi_hist_ex(channel, hist_filter, rect_size_x, rect_size_y, rect_overlap_x, rect_overlap_y):
+    " return ROI where hist_filter() returns true "
+    roi = np.zeros(channel.shape) #, dtype=np.bool)
+
+    good_rects = hist_iter_rects(channel,
+            rect_size_x, rect_size_y, rect_overlap_x, rect_overlap_y,
+            hist_filter=hist_filter)
+    for x, y in good_rects:
+        pts = [[x, y], [x+rect_size_x, y], [x+rect_size_x, y+rect_size_y], [x, y+rect_size_y]]
+        #pts = [[y, x], [y, x+rect_width], [y+rect_height, x+rect_width], [y+rect_width, x]]
+
+        roi[y:y+rect_size_y, x:x+rect_size_x] = np.ones((rect_size_y, rect_size_x))
+
+    return roi
+    
 def main():
     parser = argparse.ArgumentParser(description='Find balldrop target using histogram')
     parser.add_argument('images', nargs='+', help='input images')
@@ -157,6 +216,7 @@ def main():
         # resize to have maximum 500px width/height
         ratio = 1.0*INPUT_WIDTH/max(img.shape[:2])
         img = cv2.resize(img, (0,0), fx=ratio, fy=ratio)
+
         img_orig = img
 
         # convert to HLS
@@ -195,6 +255,9 @@ def main():
         overlap_x = RECT_OVERLAP_X
         overlap_y = RECT_OVERLAP_Y
 
+        roi = roi_hist(img_channel)
+        img_orig[roi==True] = (0, 0, 255)
+        '''
         for x, y in hist_iter_rects(img_channel, rect_width, rect_height, overlap_x, overlap_y):
             # draw a rectangle around found qrcodes
             if args.verbose > 1:
@@ -205,7 +268,7 @@ def main():
             poly1 = np.array(pts, np.int32) #.reshape((-1,1,2))
             polys = [poly1]
             cv2.polylines(img_orig, polys, True, (0, 0, 255))
-
+        '''
 
         if args.verbose > 0:
             print '%fs for %s' % (time.time()-t, img_path)
