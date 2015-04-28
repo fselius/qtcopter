@@ -4,6 +4,7 @@ from sensor_msgs.msg import Image, Range
 import rospy
 import smach
 import threading
+import cv2
 
 
 class MissionState(smach.State):
@@ -36,6 +37,8 @@ class MissionState(smach.State):
         except CvBridgeError as error:
             rospy.logerror(error)
 
+        # Apply a small blur to reduce noise.
+        image = cv2.GaussianBlur(image, (3, 3), 0, 0)
         output = self.on_execute(userdata, image, height)
 
         if output is None:

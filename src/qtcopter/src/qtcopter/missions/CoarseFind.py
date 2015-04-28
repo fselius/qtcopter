@@ -19,10 +19,17 @@ class CoarseFind(MissionState):
         '''
         rospy.loginfo('Trying to find coarse ROI in image.')
         roi = self._find_roi(image)
+
         if self._pub.get_num_connections() > 0:
             rospy.logdebug('Publishing coarse ROI.')
-            cv2.rectangle(image, roi[0], roi[1], (255, 0, 0))
+            if roi is not None:
+                cv2.rectangle(image, roi[0], roi[1], (255, 0, 0))
             img_msg = self._bridge.cv2_to_imgmsg(image, encoding='bgr8')
             self._pub.publish(img_msg)
+
+        if roi is None:
+            return None
+
         userdata.roi = roi
-        return 'succeeded'
+        return None
+        #return 'succeeded'
