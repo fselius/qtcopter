@@ -1,24 +1,24 @@
 from qtcopter.missions import MissionState
-from qtcopter.missions.balldrop.hist_find import find_roi
 import rospy
 from sensor_msgs.msg import Image
 import cv2
 
 
 class CoarseFind(MissionState):
-    def __init__(self):
+    def __init__(self, find_roi_func):
         MissionState.__init__(self,
                               outcomes=['succeeded',
                                         'aborted'],
                               output_keys=['roi'])
         self._pub = rospy.Publisher('coarse_find', Image, queue_size=1)
+        self._find_roi = find_roi_func
 
     def on_execute(self, userdata, image, height):
         '''
         Runs the "coarse find" algorithm and returns a region of interest.
         '''
         rospy.loginfo('Trying to find coarse ROI in image.')
-        roi = find_roi(image)
+        roi = self._find_roi(image)
         if self._pub.get_num_connections() > 0:
             rospy.logdebug('Publishing coarse ROI.')
             cv2.rectangle(image, roi[0], roi[1], (255, 0, 0))
