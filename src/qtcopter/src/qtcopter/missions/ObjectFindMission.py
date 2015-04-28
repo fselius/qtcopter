@@ -24,9 +24,9 @@ class ObjectFindMission(smach.State):
                                                 'aborted': 'mission aborted'})
         self.sis = smach_ros.IntrospectionServer(name, self.sm, '/SM_ROOT')
         self.sis.start()
-        rospy.loginfo('Initialized BalldropMission node.')
+        rospy.loginfo('Initialized mission node.')
 
     def execute(self):
-        rospy.loginfo('Executing BalldropMission.')
+        rospy.loginfo('Executing mission.')
         self.sm.execute()
         self.sis.stop()

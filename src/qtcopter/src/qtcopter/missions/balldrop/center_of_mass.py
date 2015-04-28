@@ -15,6 +15,7 @@ def center_of_mass(roi):
 
     #CM = com(numpy.array(roi))
     CM = com(roi)
+    return CM
 
 #    for x in xrange(0,weight):
 #        for y in xrange(0,height):
@@ -27,4 +28,3 @@ def center_of_mass(roi):
 #
 #return cmx, cmy
 
-return CM

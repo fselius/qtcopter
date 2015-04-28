@@ -31,5 +31,4 @@ class CoarseFind(MissionState):
             return None
 
         userdata.roi = roi
-        return None
-        #return 'succeeded'
+        return 'succeeded'
