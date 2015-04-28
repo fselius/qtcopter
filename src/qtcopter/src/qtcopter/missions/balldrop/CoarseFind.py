@@ -21,7 +21,6 @@ class CoarseFind(MissionState):
         roi = find_roi(image)
         if self._pub.get_num_connections() > 0:
             rospy.logdebug('Publishing coarse ROI.')
-            print(roi)
             cv2.rectangle(image, roi[0], roi[1], (255, 0, 0))
             img_msg = self._bridge.cv2_to_imgmsg(image, encoding='bgr8')
             self._pub.publish(img_msg)

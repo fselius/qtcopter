@@ -12,6 +12,14 @@ import numpy as np
 import sys
 from random import randint as rand
 
+
+def find_target(image):
+    '''
+    Return the center of the target in pixel coordinates as tuple (x, y).
+    '''
+    # TODO
+    return None
+
 if __name__ == '__main__':
     image = cv2.imread(sys.argv[1])
 

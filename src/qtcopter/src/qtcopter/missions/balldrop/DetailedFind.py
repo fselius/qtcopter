@@ -1,6 +1,9 @@
 from geometry_msgs.msg import Transform
+from sensor_msgs.msg import Image
 from qtcopter.missions import MissionState
+from qtcopter.missions.balldrop.polarity_find import find_target
 import rospy
+import cv2
 
 
 class DetailedFind(MissionState):
@@ -10,7 +13,8 @@ class DetailedFind(MissionState):
                               outcomes=['succeeded',
                                         'aborted',
                                         'failed'])
-        self._pub = rospy.Publisher('/distance_to_target', Transform)
+        self._t_pub = rospy.Publisher('/distance_to_target', Transform, queue_size=1)
+        self._i_pub = rospy.Publisher('/detailed_find', Image, queue_size=1)
 
     def on_execute(self, userdata, image, height):
         '''
@@ -19,10 +23,25 @@ class DetailedFind(MissionState):
         If the target is lost, return 'failed'.
         If the optimal position is reached, return 'succeeded'.
         '''
-        rospy.loginfo('Searching target and publishing Transform to it.')
+        # Cut out ROI
+        min, max = userdata.roi
+        rospy.loginfo('Searching for target in ROI ({0:d}, {1:d}), ({2:d}, {3:d}).'.format(min[0], min[1], max[0], max[1]))
+        image = image[min[1]:max[1], min[0]:max[1]]
+
+        # Find center of target
+        center = find_target(image)
+
+        if center is None:
+            rospy.loginfo('Lost target, try finding it again.')
+            return 'failed'
+
+        if self._i_pub.get_num_connections() > 0:
+            rospy.logdebug('Publishing center location of target.')
+            cv2.circle(image, center, int(height*10), (0, 255, 0), int(height))
+            img_msg = self._bridge.cv2_to_imgmsg(image, encoding='bgr8')
+            self._i_pub.publish(img_msg)
+
+        rospy.logdebug('Publishing transformation to target.')
         # TODO
-        rospy.sleep(5)
-        # self._pub.publish()
-        # return None
-        rospy.loginfo('Lost target, try finding it again.')
-        return 'failed'
+        # self._t_pub.publish()
+        return None
