@@ -31,15 +31,16 @@ class DetailedFind(MissionState):
         # Find center of target
         center = self._find_object_center(image)
 
+        if self._i_pub.get_num_connections() > 0:
+            rospy.logdebug('Publishing center location of target.')
+            if center is not None:
+                cv2.circle(image, center, int(height*10), (0, 255, 0), int(height))
+            img_msg = self._bridge.cv2_to_imgmsg(image, encoding='bgr8')
+            self._i_pub.publish(img_msg)
+
         if center is None:
             rospy.loginfo('Lost target, try finding it again.')
             return 'failed'
-
-        if self._i_pub.get_num_connections() > 0:
-            rospy.logdebug('Publishing center location of target.')
-            cv2.circle(image, center, int(height*10), (0, 255, 0), int(height))
-            img_msg = self._bridge.cv2_to_imgmsg(image, encoding='bgr8')
-            self._i_pub.publish(img_msg)
 
         rospy.logdebug('Publishing transformation to target.')
         # TODO
