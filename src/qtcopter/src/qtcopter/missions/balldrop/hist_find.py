@@ -7,11 +7,6 @@ center at 360, 250
 
 '''
 
-import sys
-import os
-import argparse
-import time
-
 import cv2
 import pylab
 import numpy as np
@@ -42,7 +37,6 @@ if False:
     RECT_OVERLAP_Y = 4 
 
 
-
 ########
 # dummy @profile decorator
 import __builtin__
@@ -64,11 +58,11 @@ def find_edges(hist, cut=0.05):
     We find actual edges, rather than doing a histogram equalization, which
     isn't exactly what we want, and it takes away the beautiful peaks that
     we would like to find.
-    
+
     hist - histogram
     cut - how much we want to cut of the histogram (cut from each side)
     """
-    
+
     total = hist.sum()
     cut = np.float32(cut*float(total))
     #cut = cut*total # slower..
@@ -106,7 +100,8 @@ def is_black_white(hist):
     #print 'low:', 1.0*sum(hist[:buckets])/sum(hist), 'high:', 1.0*sum(hist[-buckets:])/sum(hist), 'total:', 1.0*sides_sum/sum(hist)
     #if 1.0*sides_sum/sum(hist) > THRESHOLD:
     return 1.0*sides_sum/hist[low:high+1].sum() > THRESHOLD
-    #return 1.0*sides_sum > hist[low:high+1].sum()*THRESHOLD
+#return 1.0*sides_sum > hist[low:high+1].sum()*THRESHOLD
+
 
 @profile
 def hist_rect(channel, x=0, y=0, width=None, height=None, max_value=255):
@@ -119,13 +114,14 @@ def hist_rect(channel, x=0, y=0, width=None, height=None, max_value=255):
         width = channel.shape[1]-x
     if height is None:
         height = channel.shape[0]-y
-    
+
     # create mask of pixels we want to calc histogram of
     mask = np.zeros(channel.shape, dtype=np.uint8)
     mask[y:y+height, x:x+width] = np.ones((width, height))
     # calc histogram :)
     hist = cv2.calcHist([channel], [0], mask, dims, ranges)
     return hist.reshape(hist.size) # return a flat array
+
 
 def iter_rect(x, y, width, height, rect_width, rect_height, overlap_x, overlap_y):
     " generate rectangle coordinates "
@@ -151,11 +147,19 @@ def hist_iter_rects(channel,rect_width, rect_height, overlap_x, overlap_y, hist_
         if hist_filter(hist):
             yield x, y
 
-def roi_hist(channel, hist_filter=is_black_white,
+def roi_hist(img, nchannel=1, hist_filter=is_black_white,
             resize=500, # None to not resize
             ratio_size_to_rect=RATIO_INPUT_TO_RECT,
             ratio_rect_to_overlap=RATIO_RECT_TO_OVERLAP):
     " return ROI where hist_filter() returns true "
+
+    # convert to HLS
+    img = cv2.cvtColor(img, cv2.COLOR_BGR2HLS)
+
+    # take only the relevant channel (we probably want light)
+    channels = cv2.split(img)
+    channel = channels[nchannel]
+
     original_shape = channel.shape
 
     if resize is not None:
@@ -194,7 +198,35 @@ def roi_hist_ex(channel, hist_filter, rect_size_x, rect_size_y, rect_overlap_x, 
 
     return roi
     
-def main():
+def find_roi(img, channel=1, rect_width=RECT_SIZE_X, rect_height=RECT_SIZE_Y,
+             overlap_x=RECT_OVERLAP_X, overlap_y=RECT_OVERLAP_Y):
+    '''
+    Returns region of interest as tuple ((x_min, y_min), (x_max, y_max)).
+    '''
+    # convert to HLS
+    img = cv2.cvtColor(img, cv2.COLOR_BGR2HLS)
+
+    # take only the relevant channel (we probably want light)
+    channels = cv2.split(img)
+    img_channel = channels[channel]
+
+    points = []
+    for x, y in hist_iter_rects(img_channel, rect_width, rect_height,
+                                overlap_x, overlap_y):
+        points.append((x, y))
+        points.append((x+rect_width, y+rect_width))
+    points = np.array(points)
+    min = (np.min(points[:, 0]), np.min(points[:, 1]))
+    max = (np.max(points[:, 0]), np.max(points[:, 1]))
+
+    return (min, max)
+
+if __name__ == '__main__':
+    import sys
+    import os
+    import argparse
+    import time
+
     parser = argparse.ArgumentParser(description='Find balldrop target using histogram')
     parser.add_argument('images', nargs='+', help='input images')
     parser.add_argument('--view', action='store_true', help='view results')
@@ -204,7 +236,7 @@ def main():
     parser.add_argument('--benchmark', action='store_true', help='run some benchmarks instead')
 
     args = parser.parse_args()
-    for img_path in args.images: 
+    for img_path in args.images:
         # open image
         img = cv2.imread(img_path)
         if img is None:
@@ -215,8 +247,7 @@ def main():
 
         # resize to have maximum 500px width/height
         ratio = 1.0*INPUT_WIDTH/max(img.shape[:2])
-        img = cv2.resize(img, (0,0), fx=ratio, fy=ratio)
-
+        img = cv2.resize(img, (0, 0), fx=ratio, fy=ratio)
         img_orig = img
 
         # convert to HLS
@@ -228,9 +259,9 @@ def main():
 
         # for Hue the ranges are 0-179. Saturate & Light are 0-255.
         if args.channel == 0:
-                max_value = 179
+            max_value = 179
         else:
-                max_value = 255
+            max_value = 255
 
         # just run a benchmark if requested
         if args.benchmark:
@@ -238,24 +269,23 @@ def main():
             N = 1000
             t = time.time()
             for i in range(N):
-                    #hist = hist_rect(img_channel, 220, 330, 40, 40, max_value=max_value)
-                    hist = hist_rect(img_channel, 0, 0, None, None, max_value=max_value)
+                #hist = hist_rect(img_channel, 220, 330, 40, 40, max_value=max_value)
+                hist = hist_rect(img_channel, 0, 0, None, None, max_value=max_value)
             print 'hist:', (time.time()-t)/N
 
             N = 1000
             t = time.time()
             for i in range(N):
-                    x = is_black_white(hist)
+                x = is_black_white(hist)
             print 'is_black_white:', (time.time()-t)/N
             continue
-            
-        # calc hist
+
         rect_width = RECT_SIZE_X
         rect_height = RECT_SIZE_Y
         overlap_x = RECT_OVERLAP_X
         overlap_y = RECT_OVERLAP_Y
 
-        roi = roi_hist(img_channel)
+        roi = roi_hist(img_orig)
         img_orig[roi==True] = (0, 0, 255)
         '''
         for x, y in hist_iter_rects(img_channel, rect_width, rect_height, overlap_x, overlap_y):
@@ -269,7 +299,6 @@ def main():
             polys = [poly1]
             cv2.polylines(img_orig, polys, True, (0, 0, 255))
         '''
-
         if args.verbose > 0:
             print '%fs for %s' % (time.time()-t, img_path)
         if args.view:
@@ -277,9 +306,6 @@ def main():
             while True:
                 if cv2.waitKey(1)&0xff == ord('q'):
                     break
-                
-            cv2.destroyWindow('bah')
 
-if __name__=='__main__':
-    main()
+            cv2.destroyWindow('bah')
 
