@@ -1,8 +1,8 @@
-from geometry_msgs.msg import Transform
 from qtcopter.missions import MissionState
 from qtcopter.missions.balldrop.coords import cam_pixel_to_xy
 import rospy
 import cv2
+import tf
 
 
 class DetailedFind(MissionState):
@@ -14,8 +14,7 @@ class DetailedFind(MissionState):
                                         'aborted',
                                         'failed'])
         self._find_object_center = find_object_center_func
-        self._pub = rospy.Publisher('/distance_to_target', Transform,
-                                    queue_size=1)
+        self._pub = tf.TransformBroadcaster()
 
     def on_execute(self, userdata, image, height):
         '''
@@ -37,7 +36,7 @@ class DetailedFind(MissionState):
         center = self._find_object_center(cropped_image)
         if center is not None:
             # Add offset to uncropped image
-            center = (center[0] + min[0], center[1] + min[1])
+            center = (int(center[0] + min[0]), int(center[1] + min[1]))
 
         def draw_center_location():
             rospy.logdebug('Publishing center location of target.')
@@ -53,10 +52,15 @@ class DetailedFind(MissionState):
             return 'failed'
 
         rospy.logdebug('Publishing transformation to target.')
-        # TODO - determine camera to ball offset, save it somewhere
-        CAM_BALL_OFFSET_X, CAM_BALL_OFFSET_Y = (0, 0)
-        x, y = cam_pixel_to_xy(height, image.shape[1], image.shape[0], center[0], center[1], CAM_BALL_OFFSET_X, CAM_BALL_OFFSET_Y)
-        # TODO: save x, y, height offset to output
-        #self._pub.publish()
-        #return 'succeeded'
+        x, y = cam_pixel_to_xy(height, image.shape[1], image.shape[0],
+                               center[0], center[1], 0, 0)
+        angle = tf.transformations.quaternion_from_euler(0, 0, 0)
+        self._pub.sendTransform((x, y, height),
+                                angle,
+                                rospy.Time.now(),
+                                'camera',
+                                'target')
+
+        # TODO: when mission finished:
+        #  return 'succeeded'
         return None

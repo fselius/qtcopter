@@ -5,11 +5,12 @@ from qtcopter.missions import DistanceFind
 from qtcopter.missions import ObjectFindMission
 
 
-def foo(image):
+def find_balloon(image):
     return None
+
 
 if __name__ == '__main__':
     # Search for color red (color ordering is BGR)
     finder = DistanceFind((17, 15, 100), (90, 96, 200))
-    mission = ObjectFindMission('balloon_mission', finder.find_roi, foo)
+    mission = ObjectFindMission('balloon_mission', finder.find_roi, find_balloon)
     mission.execute()
