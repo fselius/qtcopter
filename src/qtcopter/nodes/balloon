@@ -10,6 +10,6 @@ def foo(image):
 
 if __name__ == '__main__':
     # Search for color red (color ordering is BGR)
-    finder = DistanceFind((17, 15, 100), (80, 86, 200))
+    finder = DistanceFind((17, 15, 100), (90, 96, 200))
     mission = ObjectFindMission('balloon_mission', finder.find_roi, foo)
     mission.execute()

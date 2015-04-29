@@ -12,10 +12,16 @@ class DistanceFind:
         self.max_factor = max_factor
 
     def find_roi(self, image):
+        # Apply a small blur to reduce noise.
+        image = cv2.blur(image, (15, 15))
+
         roi_mask = cv2.inRange(image, self.lower, self.upper)
         y_indices, x_indices = np.where(roi_mask)
 
-        # output = cv2.bitwise_and(image, image, mask=roi_mask)
+        # DEBUG OUTPUT
+        #output = cv2.bitwise_and(image, image, mask=roi_mask)
+        #cv2.imshow('Out', output)
+        #cv2.waitKey(100)
 
         if x_indices.size == 0 or y_indices.size == 0:
             return None

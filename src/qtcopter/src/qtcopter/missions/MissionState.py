@@ -8,16 +8,25 @@ import cv2
 
 
 class MissionState(smach.State):
-    def __init__(self, outcomes=[], input_keys=[], output_keys=[]):
+    def __init__(self, debug_pub, outcomes=[], input_keys=[], output_keys=[]):
         smach.State.__init__(self,
                              outcomes=outcomes,
                              input_keys=input_keys,
                              output_keys=output_keys)
+        self._debug_pub = debug_pub
         self._trigger_event = threading.Event()
         self._bridge = CvBridge()
         self._input_keys = input_keys
         self._output_keys = output_keys
         rospy.logdebug('%s initialized.'.format(self))
+
+    def debug_publish(self, callback):
+        if self._debug_pub.get_num_connections() <= 0:
+            return
+
+        image = callback()
+        img_msg = self._bridge.cv2_to_imgmsg(image, encoding='bgr8')
+        self._debug_pub.publish(img_msg)
 
     def on_execute(self):
         '''
@@ -37,8 +46,6 @@ class MissionState(smach.State):
         except CvBridgeError as error:
             rospy.logerror(error)
 
-        # Apply a small blur to reduce noise.
-        image = cv2.GaussianBlur(image, (3, 3), 0, 0)
         output = self.on_execute(userdata, image, height)
 
         if output is None:
