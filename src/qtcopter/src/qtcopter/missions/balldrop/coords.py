@@ -3,19 +3,22 @@
 import argparse
 import numpy as np
 
-def cam_pixel_to_xy(distance, pixel_width, pixel_height, x_pixel, y_pixel, x_os, y_os):#, focal_length):
+def cam_pixel_to_xy(distance, width_px, height_px, x_px, y_px, x_offset_m, y_offset_m):#, focal_length):
     '''
-    distance    - distance to ground
-    pixel_width, height - picture size in pixels
-    x_pixel, y  - pixel on image
-    x_os, y_os  - offset of camera from balldrop on quadcopter
+    cam_pixel_to_xy - convert camera pixel offset to ground xy offset relative
+                      view direction.
+
+    distance               - distance to ground [meters]
+    width_px, height_px    - picture size [pixels]
+    x_px, y_px             - image point [pixels]
+    x_offset_m, y_offset_m - offset of camera from balldrop on quadcopter in meters
     '''
-    (xx, yy) = (2.*x_pixel*distance/pixel_width, 2.*y_pixel*distance/pixel_height)
+    (xx, yy) = (2.*x_px*distance/width_px, 2.*y_px*distance/height_px)
     #(x, y)   = ((distance/focal_length)*(x_pixel, y_pixel)
     #print "dx = %d dy = %d, dz = %d\n" % (x, y, distance)
     #print "dx = %f dy = %f, dz = %f\n" % (xx-x_os, yy-y_os, distance)
     #return x, y
-    return (xx-x_os, yy-y_os)
+    return (xx-x_offset_m, yy-y_offset_m)
 
 if __name__=='__main__':
     parser = argparse.ArgumentParser(description='Find balldrop target location')
