@@ -1,0 +1,7 @@
+<launch>
+  <arg name="camera" default="true" />
+  <include file="$(find qtcopter_sim)/launch/common/sim.launch">
+    <arg name="camera" value="$(arg camera)" />
+  </include>
+  <node pkg="qtcopter" type="balloon" name="balloon_mission" output="screen" />
+</launch>

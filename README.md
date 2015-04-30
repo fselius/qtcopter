@@ -13,7 +13,7 @@
     export_vm.sh        Export a VM for non-developers
     Vagrantfile         Configuration for Vagrant
 
-## Developer Quickstart
+## For Developers
 
 If you are already running Ubuntu 14.04 (Trusty), you can execute `bootstrap.sh` to set everything up for you.
 
@@ -32,7 +32,24 @@ To export the VM for non-developers:
 $ ./export_vm.sh
 ```
 
-## User Quickstart
+### State Machine Introspection
+
+![State machine for the balldrop mission](images/balldrop_statemachine.png)
+
+Unfortunately, the SMACH (State MACHine) package's GUI tools are broken in ROS Indigo, but you can apply a patch to fix it:
+
+```
+$ sudo patch -d /opt/ros/indigo -p1 < ./smach_viewer.patch
+```
+
+To run the state machine viewer (example for the balldrop mission):
+
+```
+$ roslaunch qtcopter_sim balldrop.launch
+$ rosrun smach_viewer smach_viewer.py
+```
+
+## For Users
 
 Obtain a VM image from the developers and start it in [VirtualBox][virtualbox]. Username and password are both `vagrant`. Each time you want to update the Qtcopter code, run `update_qtcopter.sh` from the Desktop.
 

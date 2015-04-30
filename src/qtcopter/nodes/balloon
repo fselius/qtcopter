@@ -1,8 +1,16 @@
 #!/usr/bin/env python2
 
-"""
-ROS node for balloon mission.
-"""
+from qtcopter.missions import DistanceFind
+#from qtcopter.missions.balloon.blob_find import find_balloon
+from qtcopter.missions import ObjectFindMission
+
+
+def find_balloon(image):
+    return None
+
 
 if __name__ == '__main__':
-    print('TODO')
+    # Search for color red (color ordering is BGR)
+    finder = DistanceFind((17, 15, 100), (90, 96, 200))
+    mission = ObjectFindMission('balloon_mission', finder.find_roi, find_balloon)
+    mission.execute()

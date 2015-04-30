@@ -8,58 +8,75 @@ Usage:
 '''
 
 import cv2
-import numpy as np
 import sys
-from random import randint as rand
+import rospy
+
+
+def find_contours(image):
+    image = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
+    image = cv2.medianBlur(image, 13)
+    _, threshold = cv2.threshold(image, 180, 1, cv2.THRESH_BINARY)
+
+    if threshold is None or threshold.size == 0:
+        return None, None
+
+    contours, hierarchy = cv2.findContours(threshold, cv2.RETR_TREE,
+                                           cv2.CHAIN_APPROX_SIMPLE)
+
+    if hierarchy is not None:
+        hierarchy = hierarchy[0]
+
+    return contours, hierarchy
+
+
+def find_target(image):
+    '''
+    Return the center of the target in pixel coordinates as tuple (x, y).
+    '''
+    contours, hierarchy = find_contours(image)
+    if contours is None or hierarchy is None:
+        return None
+
+    # Find leaf contours with parent and at least 50 points.
+    leaf_contours_idx = [i for i, c in enumerate(contours) if len(c) >= 50 and
+                         hierarchy[i][2] >= 0 and hierarchy[i][3] < 0]
+
+    # DEBUG OUTPUT
+    cv2.drawContours(image, contours, -1, (0, 0, 255))
+
+    # Go up and check polarity
+    for i in leaf_contours_idx:
+        polarity = True
+        inner_counter = 0
+        idx = i
+        while idx >= 0:
+            area = cv2.contourArea(contours[idx], True)
+
+            if area > 0 and polarity or area < 0 and not polarity:
+                inner_counter += 1
+                polarity = not polarity
+            #else:
+            #    # Go to next in same hierarchy level
+            #    idx = hierarchy[idx][0]
+            #    continue
+
+            if inner_counter > 3:
+                rospy.loginfo('Found circle contour.')
+                # TODO: check all circles (parents)
+                moments = cv2.moments(contours[idx])
+                x = int(moments['m10']/moments['m00'])
+                y = int(moments['m01']/moments['m00'])
+                return (x, y)
+            idx = hierarchy[idx][2]
+
+    return None
 
 if __name__ == '__main__':
     image = cv2.imread(sys.argv[1])
 
-    h, w = image.shape[:2]
-    img = cv2.blur(cv2.cvtColor(image, cv2.COLOR_BGR2GRAY), (3, 3))
-    _, threshold = cv2.threshold(img, 100, 255, cv2.THRESH_BINARY)
-    contours, [hierarchy] = cv2.findContours(threshold, cv2.RETR_TREE,
-                                             cv2.CHAIN_APPROX_SIMPLE)
+    center = find_target(image)
 
-    assert(len(hierarchy) == len(contours))
-
-    def count_children(hierarchy, i):
-        if i <= -1:
-            return 0
-        count = 0
-        while i > -1:
-            count += count_children(hierarchy, hierarchy[i][2])
-            i = hierarchy[i][0]
-        return count + 1
-
-    # Only keep top-level contours with min 2 children and at least 50 points
-    contours_idx = [i for i, c in enumerate(contours) if len(c) >= 50 and
-                    hierarchy[i][2] > -1 and hierarchy[i][3] <= -1 and
-                    count_children(hierarchy, hierarchy[i][2]) >= 2]
-
-    def flatten_hierarchy(contours, hierarchy, initial):
-        contours_idx = [hierarchy[initial][2]]
-        ret = [initial]
-        while len(contours_idx) > 0:
-            i = contours_idx.pop()
-            if i <= -1:
-                continue
-            if len(contours[i]) >= 50:
-                ret.append(i)
-                contours_idx.append(hierarchy[i][2])
-            contours_idx.append(hierarchy[i][0])
-        return ret
-
-    contours_idx = sum([flatten_hierarchy(contours, hierarchy, i)
-                       for i in contours_idx], [])
-
-    ellipses = [cv2.fitEllipse(contours[i]) for i in contours_idx]
-
-    cv2.namedWindow('contours', cv2.WINDOW_AUTOSIZE)
-    for i, j in enumerate(contours_idx):
-        color = (rand(0, 255), rand(0, 255), rand(0, 255))
-        #cv2.drawContours(image, contours, j, color, 1, 8)
-        cv2.ellipse(image, ellipses[i], color, 2, 8)
-    cv2.imshow('contours', image)
+    cv2.circle(image, center, 5, (0, 0, 255), 5)
+    cv2.imshow('model', image)
     cv2.waitKey(0)
     cv2.destroyAllWindows()
