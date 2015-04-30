@@ -72,9 +72,9 @@ class Navigator:
 
     #PublishRCMessage : publish new message to rc/override topic to set rc channels
     #params : RcMessage object with all channels set
-    def PublishRCMessage(self, rcMessage):
-        if self.__IsPublishAllowed():
-            self.__rcOverrideTopic.publish(rcMessage)
+    #def PublishRCMessage(self, rcMessage):
+    #    if self.__IsPublishAllowed():
+    #        self.__rcOverrideTopic.publish(rcMessage)
 
     #HumanOverrideCallback : Constantly checking rc/override HumanOverride channel and maintaining a
     #boolean flag according to that
@@ -83,12 +83,13 @@ class Navigator:
         val = data.channels[self.__navigatorParams["HumanOverrideChannel"]]
         threshHold = self.__navigatorParams["HumanOverrideThreshold"]
         if (val < self.__humanOverrideDefault - threshHold) or (val > self.__humanOverrideDefault + threshHold):
-            self.__humanOverrideFlag = False
+            self.__humanOverrideFlag = True
 
     #IsPublishAllowed : Make all safety checks in this method.
     #return value : True/False according to all safety checks.
     def __IsPublishAllowed(self):
-        if not self.__humanOverrideFlag or (time.time() - self.__humanOverrideElapsedTime > 2):
+        if self.__humanOverrideFlag or \
+                (time.time() - self.__humanOverrideElapsedTime > self.__navigatorParams["HumanOverrideElapsedTimeAllowed"]):
             print "Human override channel activated, publish disabled"
             #TBD: define logger behavior here
             return False

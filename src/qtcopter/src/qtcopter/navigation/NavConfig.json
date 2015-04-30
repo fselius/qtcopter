@@ -12,11 +12,15 @@
             "Limbo"
             ],
         "Boolean":true
-    }
-
+    },
     "params":{
       "HumanOverrideChannel":7,
       "HumanOverrideDefault":1000,
-      "HumanOverrideThreshold":50
-    }
+      "HumanOverrideThreshold":50,
+      "HumanOverrideElapsedTimeAllowed":2
+    },
+    "modes":[
+      "RTL", "POSHOLD", "LAND", "OF_LOITER", "STABILIZE", "AUTO", "GUIDED",
+      "DRIFT", "FLIP", "AUTOTUNE", "ALT_HOLD", "LOITER", "POSITION", "CIRCLE",
+      "SPORT", "ACRO"]
 }
