@@ -8,7 +8,7 @@ from PIDModule import PIDController
 import Configuration
 
 
-config = Configuration.Configuration('/home/efishtain/PycharmProjects/Quad/Repo/qtcopter/src/qtcopter/src/qtcopter/navigation/PidConfig.json')
+config = Configuration.Configuration('PidConfig.json')
 
 class PIDManager:
     def __init__(self, dt, minLimit, maxLimit):
