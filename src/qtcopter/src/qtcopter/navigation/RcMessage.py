@@ -26,7 +26,7 @@ class RcMessage:
         return msg
 
     def ResetRcChannels(self):
-        for i in range(0,6):
+        for i in range(0,7):
             self.__rcChannels[i] = OverrideRCIn.CHAN_NOCHANGE
 
     #set all rc_channels with mid value

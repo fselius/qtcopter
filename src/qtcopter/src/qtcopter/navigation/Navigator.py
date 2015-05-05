@@ -10,6 +10,7 @@ from rospy.core import rospydebug
 from RcMessage import RcMessage
 from mavros.msg import State
 from Configuration import Configuration
+from geometry_msgs.msg import PoseWithCovarianceStamped
 
 config = Configuration("NavConfig.json")
 #FlightMode class : encapsulates all mode related operations of the drone
@@ -21,27 +22,31 @@ class Navigator:
     __rcOverrideTopic = None
     __humanOverrideFlag = False
     __humanOverrideDefault = None
-    __humanOverrideElapsedTime = None
+    __humanOverrideElapsedTime = 0
     __navigatorParams = None
+    __baseGlobalPosition = None
+    __currentGlobalPosition = None
 
     #Register to all needed topics/services for this object
     #init a RcMessage as a member for this class, to be able to control whats published
     #on the rc/override topic
     def __init__(self):
-        self.__navigatorParams = Configuration.GetConfigurationSection("params")
+        self.__navigatorParams = config.GetConfigurationSection("params")
         self.__humanOverrideDefault = self.__navigatorParams["HumanOverrideDefault"]
         self.__setModeService = rospy.ServiceProxy('/mavros/set_mode',SetMode)
         self.__armingService = rospy.ServiceProxy('/mavros/cmd/arming', CommandBool)
         self.__rcOverrideTopic = rospy.Publisher('/mavros/rc/override',OverrideRCIn,queue_size = 10) #TBD : how to determine queue size
         self.__rcOverrideListener = rospy.Subscriber('/mavros/rc/override',OverrideRCIn,self.__HumanOverrideCallback)
+        self.__currentPositionListener = rospy.Subscriber('/mavros/global_position/local',PoseWithCovarianceStamped,self.__GlobalPositionCallback)
         self.__rcMessage = RcMessage()
 
     #Arm: arm/disarm the drone
     #param : armDisarmBool - true for arm, false for disarm
     #return value : success/failure
     def Arm(self, armDisarmBool):
+        self.__baseGlobalPosition = self.__currentGlobalPosition
         self.__rcMessage.PrepareForArming()
-        self.PublishRCMessage(self.__rcMessage.GetRcMessage())
+        self.__rcOverrideTopic.publish(self.__rcMessage.GetRcMessage())
         time.sleep(1) #TBD : is this necessary? need to check if topic was grabbed
         try:
             return self.__armingService(armDisarmBool)
@@ -72,7 +77,6 @@ class Navigator:
 
     #PublishRCMessage : publish new message to rc/override topic to set rc channels
     #params : RcMessage object with all channels set
-    #def PublishRCMessage(self, rcMessage):
     #    if self.__IsPublishAllowed():
     #        self.__rcOverrideTopic.publish(rcMessage)
 
@@ -81,14 +85,23 @@ class Navigator:
     def __HumanOverrideCallback(self, data):
         self.__humanOverrideElapsedTime = time.time()
         val = data.channels[self.__navigatorParams["HumanOverrideChannel"]]
+        print "humanoverride channel: " + str(val)
         threshHold = self.__navigatorParams["HumanOverrideThreshold"]
         if (val < self.__humanOverrideDefault - threshHold) or (val > self.__humanOverrideDefault + threshHold):
             self.__humanOverrideFlag = True
 
+    def __GlobalPositionCallback(self, data):
+        self.__currentGlobalPosition = data
+
     #IsPublishAllowed : Make all safety checks in this method.
     #return value : True/False according to all safety checks.
     def __IsPublishAllowed(self):
-        if self.__humanOverrideFlag or \
+        print "calc: "  + str(time.time() - self.__humanOverrideElapsedTime)
+        print "time: " + str(time.time())
+        print "humanelapsed: " + str(self.__humanOverrideElapsedTime)
+        print "humanFlag: " + str(self.__humanOverrideFlag)
+        print "elapsedParam: " + str(self.__navigatorParams["HumanOverrideElapsedTimeAllowed"])
+        if self.__humanOverrideFlag or self.__humanOverrideElapsedTime != 0 and \
                 (time.time() - self.__humanOverrideElapsedTime > self.__navigatorParams["HumanOverrideElapsedTimeAllowed"]):
             print "Human override channel activated, publish disabled"
             #TBD: define logger behavior here
