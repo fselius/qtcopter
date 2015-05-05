@@ -1,7 +1,6 @@
 #!/usr/bin/env python
 # Software License Agreement (BSD License)
 
-
 import rospy
 from qtcopter.msg import controller_msg, uav_msg
 from PIDModule import PIDController
@@ -21,20 +20,23 @@ class PIDManager:
                                 "Z": PIDController(zConfig["KP"], zConfig["KI"], zConfig["KD"], dt, minLimit, maxLimit),
                                 "Theta": PIDController(thetaConfig["KP"], thetaConfig["KI"], thetaConfig["KD"], dt, minLimit, maxLimit)
                                 }
-        rospy.Subscriber("/ip/error", controller_msg, self.DataCollector)
+        rospy.Subscriber("/pid_input", controller_msg, self.DataCollector)
 
     def DataCollector(self, msg):
-        self.AxisControllers["X"].SetError(msg.x)
-        self.AxisControllers["Y"].SetError(msg.y)
+        #self.AxisControllers["X"].SetError(msg.x)
+        #self.AxisControllers["Y"].SetError(msg.y)
         self.AxisControllers["Z"].SetError(msg.z)
-        self.AxisControllers["Theta"].SetError(msg.t)
+        #self.AxisControllers["Theta"].SetError(msg.t)
 
     def Run(self):
         msg = controller_msg()
-        msg.x = self.AxisControllers["X"].GetFix()
+        #msg.x = self.AxisControllers["X"].GetFix()
         msg.z = self.AxisControllers["Z"].GetFix()
-        msg.y = self.AxisControllers["Y"].GetFix()
-        msg.t = self.AxisControllers["Theta"].GetFix()
+        #msg.y = self.AxisControllers["Y"].GetFix()
+        #msg.t = self.AxisControllers["Theta"].GetFix()
+        msg.x=0
+        msg.y=0
+        msg.t=0
         return msg
 
 if __name__ == '__main__':

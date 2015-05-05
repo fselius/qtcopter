@@ -8,13 +8,13 @@
 
 class PIDController:
     def __init__(self, kp, kd, ki, dt, minLimit, maxLimit):
-        self.kp = int(kp)
-        self.kd = int(kd)
-        self.ki = int(ki)
-        self.dt = int(dt)
+        self.kp = float(kp)
+        self.kd = float(kd)
+        self.ki = float(ki)
+        self.dt = float(dt)
         self.integral = 0
-        self.MaxLimit = int(maxLimit)
-        self.MinLimit = int(minLimit)
+        self.MaxLimit = float(maxLimit)
+        self.MinLimit = float(minLimit)
         self.LastError = 0
         self.error=0
         print("Started PIDController with %s %s %s %s" %(kp,kd,ki,dt))
