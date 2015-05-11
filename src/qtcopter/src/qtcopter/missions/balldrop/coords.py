@@ -13,6 +13,7 @@ def cam_pixel_to_xy(distance, width_px, height_px, x_px, y_px, x_offset_m, y_off
     x_px, y_px             - image point [pixels]
     x_offset_m, y_offset_m - offset of camera from balldrop on quadcopter in meters
     '''
+    # FIXME? aren't x_px and y_px offsets from the center of the image?
     (xx, yy) = (2.*x_px*distance/width_px, 2.*y_px*distance/height_px)
     #(x, y)   = ((distance/focal_length)*(x_pixel, y_pixel)
     #print "dx = %d dy = %d, dz = %d\n" % (x, y, distance)

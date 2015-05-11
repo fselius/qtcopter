@@ -11,6 +11,9 @@ import cv2
 import pylab
 import numpy as np
 from math import ceil
+from utils import filter_contours
+
+from qtcopter.navigation.Camera import Camera
 
 
 # constants
@@ -177,7 +180,6 @@ def roi_hist(img, nchannel=1, hist_filter=is_black_white,
     # calculate small roi
     roi = roi_hist_ex(channel, hist_filter,
                     rect_size_x, rect_size_y, rect_overlap_x, rect_overlap_y)
-    
     if resize is not None:
         # resize roi
         roi = cv2.resize(roi, original_shape)
@@ -185,7 +187,7 @@ def roi_hist(img, nchannel=1, hist_filter=is_black_white,
 
 def roi_hist_ex(channel, hist_filter, rect_size_x, rect_size_y, rect_overlap_x, rect_overlap_y):
     " return ROI where hist_filter() returns true "
-    roi = np.zeros(channel.shape) #, dtype=np.bool)
+    roi = np.zeros(channel.shape, dtype=np.uint8)
 
     good_rects = hist_iter_rects(channel,
             rect_size_x, rect_size_y, rect_overlap_x, rect_overlap_y,
@@ -286,7 +288,28 @@ if __name__ == '__main__':
         overlap_y = RECT_OVERLAP_Y
 
         roi = roi_hist(img_orig)
-        img_orig[roi==True] = (0, 0, 255)
+        img, contours, hier = cv2.findContours(roi, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+        print img.shape, img.dtype
+
+        cam_height = 1.8 # roees height
+        cam_size = img.shape[:2]
+        cam = Camera('iphone 6 plus', dummy=True)
+        cam.set_resolution(cam_size, ((3264-2448)/2, 0, 2448, 2448))
+        # area, rect
+        good = filter_contours(contours, cam_height, cam)
+        print 'contours:'
+        for i, cont in enumerate(contours):
+            print i, 'area:', cv2.contourArea(cont), 
+            rect = cv2.boundingRect(cont)
+            print 'rect:', rect
+            cv2.rectangle(img_orig, rect[0:2], (rect[0]+rect[2], rect[1]+rect[3]), (255, 0,0), 2)
+        print 'good contours:', len(good)
+        
+        cv2.drawContours(img_orig, contours, -1, (0, 0, 255))
+        #im
+        #print 'contours:', len(cont), cont
+        #print len(cont[0]), len(cont[1]), len(cont[2])
+        #img_orig[roi==True] = (0, 0, 255)
         '''
         for x, y in hist_iter_rects(img_channel, rect_width, rect_height, overlap_x, overlap_y):
             # draw a rectangle around found qrcodes
