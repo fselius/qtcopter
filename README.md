@@ -32,6 +32,24 @@ To export the VM for non-developers:
 $ ./export_vm.sh
 ```
 
+To run tests with a static image (in separate terminals):
+
+```
+$ roscore
+$ roslaunch qtcopter_sim sim.launch camera:=false image_path:=path/to/image
+$ rosrun qtcopter <mission>
+```
+
+To run tests with a connected camera (in separate terminals):
+
+```
+$ roscore
+$ roslaunch qtcopter_sim sim.launch
+$ rosrun qtcopter <mission>
+```
+
+Or use `roslaunch qtcopter_sim <mission>.launch`.
+
 ### State Machine Introspection
 
 ![State machine for the balldrop mission](images/balldrop_statemachine.png)

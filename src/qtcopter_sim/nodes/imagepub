@@ -4,9 +4,10 @@
 Publish a sensor_msgs/Image to a topic.
 '''
 
-import rospy
 import argparse
 import cv2
+import os
+import rospy
 from sensor_msgs.msg import Image
 from cv_bridge import CvBridge
 
@@ -20,7 +21,8 @@ if __name__ == '__main__':
 
     rospy.loginfo('Publishing {0} to {1}'.format(args.image, args.topic))
 
-    cv_image = cv2.imread(args.image, cv2.CV_LOAD_IMAGE_COLOR)
+    cv_image = cv2.imread(os.path.expanduser(args.image),
+                          cv2.CV_LOAD_IMAGE_COLOR)
 
     rospy.init_node('imagepub', anonymous=True)
     pub = rospy.Publisher(args.topic, Image, queue_size=1)

@@ -1,13 +1,14 @@
 <launch>
   <arg name="camera" default="true" />
+  <arg name="image_path" unless="$(arg camera)" />
 
   <!-- Height of quadcopter -->
   <node pkg="qtcopter_sim" type="rangepub" name="publish_height" args="/height 0.5 -r 50" if="$(arg camera)" />
   <node pkg="qtcopter_sim" type="rangepub" name="publish_height" args="/height 3.0 -r 50" unless="$(arg camera)" />
 
   <!-- Camera -->
-  <node pkg="qtcopter_sim" type="imagepub" name="publish_image" args="/image $(find qtcopter_sim)/images/target.jpg -r 50" unless="$(arg camera)" />
-  <node pkg="usb_cam" type="usb_cam_node" name="publish_image">
+  <node pkg="qtcopter_sim" type="imagepub" name="publish_image" args="/image $(arg image_path) -r 50" unless="$(arg camera)" />
+  <node pkg="usb_cam" type="usb_cam_node" name="publish_image" if="$(arg camera)">
     <remap from="publish_image/image_raw" to="image" />
   </node>
 
