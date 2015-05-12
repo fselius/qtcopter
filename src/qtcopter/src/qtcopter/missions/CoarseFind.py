@@ -10,7 +10,11 @@ class CoarseFind(MissionState):
                               outcomes=['succeeded',
                                         'aborted'],
                               output_keys=['roi'])
-        self._find_roi = find_roi_func
+        if find_roi_func is None:
+            rospy.logwarn('CoarseFind: Using dummy ROI finder function.')
+            self._find_roi = lambda image: ((0, 0), (image.shape[1], image.shape[0]))
+        else:
+            self._find_roi = find_roi_func
 
     def on_execute(self, userdata, image, height):
         '''
