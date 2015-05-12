@@ -1,5 +1,5 @@
-from qtcopter.missions import MissionState
-from qtcopter.missions.balldrop.coords import cam_pixel_to_xy
+from . import MissionState
+from .balldrop.coords import cam_pixel_to_xy
 import rospy
 import cv2
 import tf

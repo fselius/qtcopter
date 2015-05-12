@@ -1,6 +1,6 @@
-from qtcopter.missions.MissionState import MissionState
-from qtcopter.missions.CoarseFind import CoarseFind
-from qtcopter.missions.DetailedFind import DetailedFind
-from qtcopter.missions.DistanceFind import DistanceFind
+from .MissionState import MissionState
+from .CoarseFind import CoarseFind
+from .DetailedFind import DetailedFind
+from .DistanceFind import DistanceFind
 
-from qtcopter.missions.ObjectFindMission import ObjectFindMission
+from .ObjectFindMission import ObjectFindMission

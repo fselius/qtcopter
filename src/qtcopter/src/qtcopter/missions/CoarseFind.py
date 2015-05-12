@@ -1,4 +1,4 @@
-from qtcopter.missions import MissionState
+from . import MissionState
 import rospy
 import cv2
 
