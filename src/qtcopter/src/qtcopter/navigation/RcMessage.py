@@ -12,7 +12,6 @@ class RcMessage:
     __MID_VAL = 1500
     __MAXIMUM_VAL = 2000
     __THROTTLE_ARM_VALUE = 1000
-    __HUMAN_OVERRIDE_VALUE = 1000
     __rcChannels = None
 
     def __init__(self):
@@ -30,15 +29,14 @@ class RcMessage:
             self.__rcChannels[i] = OverrideRCIn.CHAN_NOCHANGE
 
     #set all rc_channels with mid value
-    #TBD : fix issue with this for loop
     def BalanceRcChannels(self):
-        for i in range(0,6):
+        for i in range(0,3):
             self.__rcChannels[i] = self.__MID_VAL
 
     def PrepareForArming(self):
         self.BalanceRcChannels()
         self.SetThrottle(self.__THROTTLE_ARM_VALUE)
-        self.SetHumanOverride(self.__HUMAN_OVERRIDE_VALUE)
+        self.SetHumanOverride(OverrideRCIn.CHAN_NOCHANGE)
 
     def SetRoll(self, value):
         self.__rcChannels[ChannelName.Roll] = value
