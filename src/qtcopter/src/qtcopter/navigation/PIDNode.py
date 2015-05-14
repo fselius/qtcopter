@@ -15,9 +15,9 @@ class PIDManager:
         yConfig = config.GetConfigurationSection("Y")
         zConfig = config.GetConfigurationSection("Z")
         thetaConfig = config.GetConfigurationSection("Theta")
-        self.AxisControllers = {"X": PIDController(xConfig["KP"], xConfig["KI"], xConfig["KD"], dt, minLimit, maxLimit),
-                                "Y": PIDController(yConfig["KP"], yConfig["KI"], yConfig["KD"], dt, minLimit, maxLimit),
-                                "Z": PIDController(zConfig["KP"], zConfig["KI"], zConfig["KD"], dt, minLimit, maxLimit),
+        self.AxisControllers = {"X": PIDController(xConfig["KP"], xConfig["KD"], xConfig["KI"], dt, minLimit, maxLimit),
+                                "Y": PIDController(yConfig["KP"], yConfig["KD"], yConfig["KI"], dt, minLimit, maxLimit),
+                                "Z": PIDController(zConfig["KP"], zConfig["KD"], zConfig["KI"], dt, minLimit, maxLimit),
                                 "Theta": PIDController(thetaConfig["KP"], thetaConfig["KI"], thetaConfig["KD"], dt, minLimit, maxLimit)
                                 }
         rospy.Subscriber("/pid_input", controller_msg, self.DataCollector)
