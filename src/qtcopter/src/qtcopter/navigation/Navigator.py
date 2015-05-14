@@ -11,6 +11,7 @@ from RcMessage import RcMessage
 from mavros.msg import State
 from Configuration import Configuration
 from geometry_msgs.msg import PoseWithCovarianceStamped
+from mavros.msg import RCIn
 
 config = Configuration("NavConfig.json")
 #FlightMode class : encapsulates all mode related operations of the drone
@@ -36,7 +37,7 @@ class Navigator:
         self.__setModeService = rospy.ServiceProxy('/mavros/set_mode',SetMode)
         self.__armingService = rospy.ServiceProxy('/mavros/cmd/arming', CommandBool)
         self.__rcOverrideTopic = rospy.Publisher('/mavros/rc/override',OverrideRCIn,queue_size = 10) #TBD : how to determine queue size
-        self.__rcOverrideListener = rospy.Subscriber('/mavros/rc/override',OverrideRCIn,self.__HumanOverrideCallback)
+        self.__rcInListener = rospy.Subscriber('/mavros/rc/in',RCIn,self.__HumanOverrideCallback)
         self.__currentPositionListener = rospy.Subscriber('/mavros/global_position/local',PoseWithCovarianceStamped,self.__GlobalPositionCallback)
         self.__rcMessage = RcMessage()
 
@@ -68,24 +69,18 @@ class Navigator:
     #PublishRCMessage : publish new message to rc/override topic to set rc channels
     #params : roll, pitch, throttle, yaw as integer values between 1000 to 2000
     def PublishRCMessage(self, roll, pitch, throttle, yaw):
-        if self.__IsPublishAllowed():
+        #if self.__IsPublishAllowed():
             self.__rcMessage.SetRoll(roll)
             self.__rcMessage.SetPitch(pitch)
             self.__rcMessage.SetThrottle(throttle)
             self.__rcMessage.SetYaw(yaw)
             self.__rcOverrideTopic.publish(self.__rcMessage.GetRcMessage())
 
-    #PublishRCMessage : publish new message to rc/override topic to set rc channels
-    #params : RcMessage object with all channels set
-    #    if self.__IsPublishAllowed():
-    #        self.__rcOverrideTopic.publish(rcMessage)
-
     #HumanOverrideCallback : Constantly checking rc/override HumanOverride channel and maintaining a
     #boolean flag according to that
     def __HumanOverrideCallback(self, data):
         self.__humanOverrideElapsedTime = time.time()
         val = data.channels[self.__navigatorParams["HumanOverrideChannel"]]
-        print "humanoverride channel: " + str(val)
         threshHold = self.__navigatorParams["HumanOverrideThreshold"]
         if (val < self.__humanOverrideDefault - threshHold) or (val > self.__humanOverrideDefault + threshHold):
             self.__humanOverrideFlag = True
@@ -93,16 +88,25 @@ class Navigator:
     def __GlobalPositionCallback(self, data):
         self.__currentGlobalPosition = data
 
+    def GetBaseGlobalPosition(self):
+        return self.__baseGlobalPosition
+
+    def GetCurrentGlobalPostion(self):
+        return self.__currentGlobalPosition
+
     #IsPublishAllowed : Make all safety checks in this method.
     #return value : True/False according to all safety checks.
     def __IsPublishAllowed(self):
-        print "calc: "  + str(time.time() - self.__humanOverrideElapsedTime)
-        print "time: " + str(time.time())
-        print "humanelapsed: " + str(self.__humanOverrideElapsedTime)
-        print "humanFlag: " + str(self.__humanOverrideFlag)
-        print "elapsedParam: " + str(self.__navigatorParams["HumanOverrideElapsedTimeAllowed"])
+        #TODO: delete all debug printings
+        #print "calc: "  + str(time.time() - self.__humanOverrideElapsedTime)
+        #print "time: " + str(time.time())
+        #print "humanelapsed: " + str(self.__humanOverrideElapsedTime)
+        #print "humanFlag: " + str(self.__humanOverrideFlag)
+        #print "elapsedParam: " + str(self.__navigatorParams["HumanOverrideElapsedTimeAllowed"])
         if self.__humanOverrideFlag or self.__humanOverrideElapsedTime != 0 and \
                 (time.time() - self.__humanOverrideElapsedTime > self.__navigatorParams["HumanOverrideElapsedTimeAllowed"]):
+            self.__rcMessage.ResetRcChannels()
+            self.__rcOverrideTopic.publish(self.__rcMessage.GetRcMessage())
             print "Human override channel activated, publish disabled"
             #TBD: define logger behavior here
             return False
