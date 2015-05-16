@@ -8,14 +8,13 @@ Usage:
 '''
 
 import cv2
-import sys
+import numpy as np
 
 
 class PolarityFind:
-    def __init__(self, center_black, number_of_rings, ring_width):
+    def __init__(self, center_black, number_of_rings):
         self._center_black = center_black
         self._number_of_rings = number_of_rings
-        self._ring_width = ring_width
 
     def find_contours(self, image):
         image = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
@@ -69,12 +68,13 @@ class PolarityFind:
                     moments = cv2.moments(contours[idx])
                     x = int(moments['m10']/moments['m00'])
                     y = int(moments['m01']/moments['m00'])
-                    return (x, y)
+                    return ((x, y), np.sqrt(4*cv2.contourArea(contours[idx])/np.pi))
                 idx = hierarchy[idx][2]
 
-        return None
+        return (None, None)
 
 if __name__ == '__main__':
+    import sys
     image = cv2.imread(sys.argv[1])
 
     # FIXME: add parameters

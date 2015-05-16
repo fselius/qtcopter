@@ -7,13 +7,13 @@ import rospy
 
 
 def find_balloon(image):
-    return None
+    return (None, None)
 
 
 if __name__ == '__main__':
     # Search for color red (color ordering is BGR)
-    coarse_finder = DistanceFind(rospy.get_param('balloon/color/lower_bound'),
-                                 rospy.get_param('balloon/color/upper_bound'))
+    coarse_finder = DistanceFind(rospy.get_param('target/color/lower_bound'),
+                                 rospy.get_param('target/color/upper_bound'))
     mission = ObjectFindMission('balloon_mission', coarse_finder.find_roi,
                                 find_balloon)
     mission.execute()

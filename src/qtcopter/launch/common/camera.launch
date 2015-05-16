@@ -1,0 +1,3 @@
+<launch>
+  <rosparam ns="camera" file="$(find qtcopter)/config/cam_example.yaml">
+</launch>

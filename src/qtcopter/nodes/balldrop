@@ -9,8 +9,7 @@ if __name__ == '__main__':
     coarse_finder = DistanceFind(rospy.get_param('target/color/lower_bound'),
                                  rospy.get_param('target/color/upper_bound'))
     detailed_finder = PolarityFind(rospy.get_param('target/center_black'),
-                                   rospy.get_param('target/black_rings'),
-                                   rospy.get_param('target/ring_width'))
+                                   rospy.get_param('target/black_rings'))
     mission = ObjectFindMission('balldrop_mission', coarse_finder.find_roi,
                                 detailed_finder.find_target)
     mission.execute()

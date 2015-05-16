@@ -1,5 +1,6 @@
 <launch>
   <arg name="camera" default="true" />
+  <arg name="camera_pointing_downwards" />
   <arg name="image_path" unless="$(arg camera)" />
 
   <!-- Height of quadcopter -->
@@ -23,5 +24,6 @@
   <node pkg="tf" type="static_transform_publisher" name="camera_to_quadcopter" args="0 0 0.2 1.57075 0 0 camera quadcopter 100" />
   <node pkg="tf" type="static_transform_publisher" name="quadcopter_to_baselink" args="0 0 0 0 0 0 quadcopter base_link 100" />
 
-  <param name="robot_description" command="$(find xacro)/xacro.py $(find hector_quadrotor_description)/urdf/quadrotor.urdf.xacro" />
+  <param name="robot_description" unless="$(arg camera_pointing_downwards)" command="$(find xacro)/xacro.py $(find hector_quadrotor_description)/urdf/quadrotor_with_cam.urdf.xacro" />
+  <param name="robot_description" if="$(arg camera_pointing_downwards)" command="$(find xacro)/xacro.py $(find hector_quadrotor_description)/urdf/quadrotor_downward_cam.urdf.xacro" />
 </launch>

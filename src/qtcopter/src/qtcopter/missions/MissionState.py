@@ -4,7 +4,6 @@ from sensor_msgs.msg import Image, Range
 import rospy
 import smach
 import threading
-import cv2
 
 
 class MissionState(smach.State):

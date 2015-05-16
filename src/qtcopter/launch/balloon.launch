@@ -1,7 +1,8 @@
 <launch>
   <node pkg="qtcopter" type="balloon" name="balloon_mission" output="screen">
   </node>
-  <rosparam ns="balloon">
+  <rosparam ns="target">
+    size: TODO
     color:
       lower_bound: [17, 15, 100]
       upper_bound: [90, 96, 200]
