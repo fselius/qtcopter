@@ -11,7 +11,7 @@ import cv2
 import pylab
 import numpy as np
 from math import ceil
-from utils import filter_contours
+from .utils import filter_contours, TARGET_RADIUS
 
 from qtcopter.navigation.Camera import Camera
 
@@ -20,6 +20,7 @@ from qtcopter.navigation.Camera import Camera
 INPUT_WIDTH = 500
 RATIO_INPUT_TO_RECT = 1.0/20
 RATIO_RECT_TO_OVERLAP = 1.0/2
+HLS_LIGHT_CHANNEL = 1
 
 RECT_SIZE_X = int(ceil(INPUT_WIDTH*RATIO_INPUT_TO_RECT))
 RECT_SIZE_Y = int(ceil(INPUT_WIDTH*RATIO_INPUT_TO_RECT))
@@ -52,6 +53,79 @@ except AttributeError:
     __builtin__.profile = profile
 
 #########
+
+
+class HistogramFind(object):
+    def __init__(self, resize=500, channel=HLS_LIGHT_CHANNEL):
+        self.resize = resize
+        self.channel = channel
+    def find_roi(self, image, height, camera):
+        " Find ROI enclosing rectangle "
+        # resize
+        ratio = 1.0*self.resize/max(image.shape[:2])
+        if ratio < 1:
+            image = cv2.resize(image, (0,0), fx=ratio, fy=ratio)
+        
+        # find size of rectangle
+        rect_size = map(lambda _: int(ceil(_*ratio)), self.get_rect_size(height, camera))
+        rect_overlap = map(lambda _: int(ceil(RATIO_RECT_TO_OVERLAP*_)), rect_size)
+        roi = find_roi(image, channel=self.channel,
+                rect_size=rect_size, overlap=rect_overlap)
+        
+        # resize back
+        if ratio < 1:
+            roi = (roi[0][0]/ratio, roi[0][1]/ratio), (roi[1][0]/ratio, roi[1][1]/ratio)
+        return roi
+        
+    def find_roi_mask(self, image, height, camera):
+        " Find ROI mask "
+        # resize
+        ratio = 1.0*self.resize/max(image.shape[:2])
+        if ratio < 1:
+            original_shape = image.shape
+            image = cv2.resize(image, (0,0), fx=ratio, fy=ratio)
+        image = get_light(image, channel=self.channel)
+        # find size of rectangle
+        rect_size = map(lambda _: int(ceil(_*ratio)), self.get_rect_size(height, camera))
+        rect_overlap = map(lambda _: int(ceil(RATIO_RECT_TO_OVERLAP*_)), rect_size)
+        roi = roi_hist_ex(image, rect_size, rect_overlap)
+        # resize back
+        if ratio < 1:
+            roi = cv2.resize(roi, original_shape[:2])
+        return roi
+
+    def find_roi_contours(self, image, height, camera):
+        " Find ROI contours "
+        t = time.time()
+        roi = self.find_roi_mask(image, height, camera)
+        img, contours, hier = cv2.findContours(roi, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+        return filter_contours(contours, cam_height, camera)
+        
+    @staticmethod
+    def get_rect_size(height, camera):
+        " Get rectangle size for histogram "
+        zero = camera.get_camera_offset((0, 0), height) # yep, this will most likely be zero..
+        # TODO: Decide how big the histogram should be. Currently as big as TARGET_RADIUS.
+        bah = camera.get_camera_offset((TARGET_RADIUS, TARGET_RADIUS), height)
+        rect_size = abs(bah[0]-zero[0]), abs(bah[1]-zero[1])
+        return rect_size
+
+def get_light(image, channel=HLS_LIGHT_CHANNEL):
+    " Get light channel of image "
+    assert(len(image.shape) == 3)
+    # convert to HLS
+    image = cv2.cvtColor(image, cv2.COLOR_BGR2HLS)
+    # take relevant channel
+    x = cv2.split(image)[channel]
+    return x
+
+def resize(img, max_size):
+    " resize image to have maximum width/height "
+    ratio = 1.0*max_size/max(img.shape[:2])
+    if ratio >= 1:
+        return img
+    img = cv2.resize(img, (0,0), fx=ratio, fy=ratio)
+    return img
 
 @profile
 def find_edges(hist, cut=0.05):
@@ -126,97 +200,73 @@ def hist_rect(channel, x=0, y=0, width=None, height=None, max_value=255):
     return hist.reshape(hist.size) # return a flat array
 
 
-def iter_rect(x, y, width, height, rect_width, rect_height, overlap_x, overlap_y):
+def iter_rect(x, y, width, height, rect_size, overlap):
     " generate rectangle coordinates "
     i=0
     # TODO: Currently we don't handle cases when right\bottom edge isn't
     # at round boundary (i.e. not multiple of rect_width-overlap_x)
     # we should probably also yield last row/column end the end to check
     # these edges.
-    for row in range(x, width-rect_width, rect_width-overlap_x):
-        for col in range(y, height-rect_height, rect_height-overlap_y):
-            yield row, col, rect_width, rect_height
+    for row in range(x, width-rect_size[0]+1, rect_size[0]-overlap[0]):
+        for col in range(y, height-rect_size[1]+1, rect_size[1]-overlap[1]):
+            yield row, col, rect_size[0], rect_size[1]
             i+=1
     #print 'loops:', i
 
 @profile
-def hist_iter_rects(channel,rect_width, rect_height, overlap_x, overlap_y, hist_filter=is_black_white):
+def hist_iter_rects(channel, rect_size, overlap, hist_filter=is_black_white):
     " iterate over good rectangles "
     # TODO: perhaps rewrite with filter()
     it_rects = iter_rect(0, 0, channel.shape[1], channel.shape[0],
-            rect_width, rect_height, overlap_x, overlap_y)
+            rect_size, overlap)
     for x, y, width, height in it_rects:
         hist = hist_rect(channel, x, y, width, height, max_value=255)
         if hist_filter(hist):
             yield x, y
 
-def roi_hist(img, nchannel=1, hist_filter=is_black_white,
-            resize=500, # None to not resize
-            ratio_size_to_rect=RATIO_INPUT_TO_RECT,
-            ratio_rect_to_overlap=RATIO_RECT_TO_OVERLAP):
+#################
+# ROI histogram #
+def roi_hist_ex(channel, rect_size, rect_overlap, hist_filter=is_black_white):
+    " return ROI where hist_filter() returns true "
+    roi = np.zeros(channel.shape, dtype=np.uint8)
+    good_rects = hist_iter_rects(channel, rect_size, rect_overlap, hist_filter=hist_filter)
+    for x, y in good_rects:
+        pts = [[x, y], [x+rect_size[0], y], [x+rect_size[0], y+rect_size[1]], [x, y+rect_size[1]]]
+        roi[y:y+rect_size[1], x:x+rect_size[0]] = np.ones((rect_size[1], rect_size[0]))
+
+    return roi
+'''
+def roi_hist(img, channel=1, hist_filter=is_black_white,
+            resize=INPUT_WIDTH, # None to not resize
+            rect_size=(RECT_SIZE_X, RECT_SIZE_Y), #
+            overlap=(RECT_OVERLAP_X, RECT_OVERLAP_X)):
     " return ROI where hist_filter() returns true "
 
-    # convert to HLS
-    img = cv2.cvtColor(img, cv2.COLOR_BGR2HLS)
-
-    # take only the relevant channel (we probably want light)
-    channels = cv2.split(img)
-    channel = channels[nchannel]
-
-    original_shape = channel.shape
-
+    original_shape = img.shape
     if resize is not None:
         # resize
-        ratio = 1.0*resize/max(channel.shape[:2])
-        channel = cv2.resize(channel, (0,0), fx=ratio, fy=ratio)
-
-    # make rectangle size
-    height, width = channel.shape # TODO: make sure this is the order
-    rect_size_x = int(ceil(width*ratio_size_to_rect))
-    rect_size_y = int(ceil(height*ratio_size_to_rect))
-    rect_overlap_x = int(ceil(rect_size_x*ratio_rect_to_overlap))
-    rect_overlap_y = int(ceil(rect_size_y*ratio_rect_to_overlap))
+        ratio = 1.0*resize/max(img.shape[:2])
+        img = cv2.resize(img, (0,0), fx=ratio, fy=ratio)
 
     # calculate small roi
-    roi = roi_hist_ex(channel, hist_filter,
-                    rect_size_x, rect_size_y, rect_overlap_x, rect_overlap_y)
+    roi = roi_hist_ex(img, rect_size, rect_overlap, hist_filter)
     if resize is not None:
         # resize roi
         roi = cv2.resize(roi, original_shape)
     return roi
-
-def roi_hist_ex(channel, hist_filter, rect_size_x, rect_size_y, rect_overlap_x, rect_overlap_y):
-    " return ROI where hist_filter() returns true "
-    roi = np.zeros(channel.shape, dtype=np.uint8)
-
-    good_rects = hist_iter_rects(channel,
-            rect_size_x, rect_size_y, rect_overlap_x, rect_overlap_y,
-            hist_filter=hist_filter)
-    for x, y in good_rects:
-        pts = [[x, y], [x+rect_size_x, y], [x+rect_size_x, y+rect_size_y], [x, y+rect_size_y]]
-        #pts = [[y, x], [y, x+rect_width], [y+rect_height, x+rect_width], [y+rect_width, x]]
-
-        roi[y:y+rect_size_y, x:x+rect_size_x] = np.ones((rect_size_y, rect_size_x))
-
-    return roi
-    
-def find_roi(img, channel=1, rect_width=RECT_SIZE_X, rect_height=RECT_SIZE_Y,
-             overlap_x=RECT_OVERLAP_X, overlap_y=RECT_OVERLAP_Y):
+'''
+###########################
+# ROI enclosing rectangle #
+def find_roi(img, channel=1, rect_size=(RECT_SIZE_X, RECT_SIZE_Y),
+             overlap=(RECT_OVERLAP_X, RECT_OVERLAP_Y)):
     '''
-    Returns region of interest as tuple ((x_min, y_min), (x_max, y_max)).
+    Return region of interest as tuple ((x_min, y_min), (x_max, y_max)).
     '''
-    # convert to HLS
-    img = cv2.cvtColor(img, cv2.COLOR_BGR2HLS)
-
-    # take only the relevant channel (we probably want light)
-    channels = cv2.split(img)
-    img_channel = channels[channel]
-
+    img = get_light(img, channel=channel)
     points = []
-    for x, y in hist_iter_rects(img_channel, rect_width, rect_height,
-                                overlap_x, overlap_y):
+    for x, y in hist_iter_rects(img, rect_size, overlap):
         points.append((x, y))
-        points.append((x+rect_width, y+rect_width))
+        points.append((x+rect_size[0], y+rect_size[1]))
     points = np.array(points)
     min = (np.min(points[:, 0]), np.min(points[:, 1]))
     max = (np.max(points[:, 0]), np.max(points[:, 1]))
@@ -231,13 +281,16 @@ if __name__ == '__main__':
 
     parser = argparse.ArgumentParser(description='Find balldrop target using histogram')
     parser.add_argument('images', nargs='+', help='input images')
-    parser.add_argument('--view', action='store_true', help='view results')
-    #parser.add_argument('--save', '-s', action='store_true', help='save results to IMG.target.jpg')
+    parser.add_argument('--height', default=1.8, type=float, help='height from which we took the photo')
+    parser.add_argument('--camera', default='iphone 6 plus rect', help='camera that took the photo')
+    
+    parser.add_argument('--show', action='store_true', help='show results')
     parser.add_argument('--channel', '-c', default=1, type=int, help='channel (HLS) number to use')
     parser.add_argument('--verbose', '-v', action='count')
     parser.add_argument('--benchmark', action='store_true', help='run some benchmarks instead')
 
     args = parser.parse_args()
+    finder = HistogramFind(resize=500, channel=args.channel)
     for img_path in args.images:
         # open image
         img = cv2.imread(img_path)
@@ -246,24 +299,6 @@ if __name__ == '__main__':
             continue
 
         t = time.time()
-
-        # resize to have maximum 500px width/height
-        ratio = 1.0*INPUT_WIDTH/max(img.shape[:2])
-        img = cv2.resize(img, (0, 0), fx=ratio, fy=ratio)
-        img_orig = img
-
-        # convert to HLS
-        img = cv2.cvtColor(img, cv2.COLOR_BGR2HLS)
-
-        # take only the relevant channel (we probably want light)
-        channels = cv2.split(img)
-        img_channel = channels[args.channel]
-
-        # for Hue the ranges are 0-179. Saturate & Light are 0-255.
-        if args.channel == 0:
-            max_value = 179
-        else:
-            max_value = 255
 
         # just run a benchmark if requested
         if args.benchmark:
@@ -282,50 +317,35 @@ if __name__ == '__main__':
             print 'is_black_white:', (time.time()-t)/N
             continue
 
-        rect_width = RECT_SIZE_X
-        rect_height = RECT_SIZE_Y
-        overlap_x = RECT_OVERLAP_X
-        overlap_y = RECT_OVERLAP_Y
-
-        roi = roi_hist(img_orig)
-        img, contours, hier = cv2.findContours(roi, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
-        print img.shape, img.dtype
-
-        cam_height = 1.8 # roees height
-        cam_size = img.shape[:2]
-        cam = Camera('iphone 6 plus', dummy=True)
-        cam.set_resolution(cam_size, ((3264-2448)/2, 0, 2448, 2448))
-        # area, rect
-        good = filter_contours(contours, cam_height, cam)
-        print 'contours:'
-        for i, cont in enumerate(contours):
-            print i, 'area:', cv2.contourArea(cont), 
-            rect = cv2.boundingRect(cont)
-            print 'rect:', rect
-            cv2.rectangle(img_orig, rect[0:2], (rect[0]+rect[2], rect[1]+rect[3]), (255, 0,0), 2)
-        print 'good contours:', len(good)
+        cam_height = args.height # roees height
+        cam = Camera(args.camera)
         
-        cv2.drawContours(img_orig, contours, -1, (0, 0, 255))
-        #im
-        #print 'contours:', len(cont), cont
-        #print len(cont[0]), len(cont[1]), len(cont[2])
-        #img_orig[roi==True] = (0, 0, 255)
-        '''
-        for x, y in hist_iter_rects(img_channel, rect_width, rect_height, overlap_x, overlap_y):
-            # draw a rectangle around found qrcodes
-            if args.verbose > 1:
-                print x, y
-            pts = [[x, y], [x+rect_width, y], [x+rect_width, y+rect_height], [x, y+rect_width]]
-            #pts = [[y, x], [y, x+rect_width], [y+rect_height, x+rect_width], [y+rect_width, x]]
-
-            poly1 = np.array(pts, np.int32) #.reshape((-1,1,2))
-            polys = [poly1]
-            cv2.polylines(img_orig, polys, True, (0, 0, 255))
-        '''
+        what = 'find_roi_contours'
+        if what == 'find_roi_contours':
+            # find_roi_contours
+            contours = finder.find_roi_contours(img, cam_height, cam)
+            print 'contours:'
+            for i, cont in enumerate(contours):
+                print i, 'area:', cv2.contourArea(cont), 
+                rect = cv2.boundingRect(cont)
+                print 'rect:', rect
+                cv2.rectangle(img, rect[0:2], (rect[0]+rect[2], rect[1]+rect[3]), (255, 0,0), 5)
+            cv2.drawContours(img, contours, -1, (0, 0, 255), 5)
+        elif what == 'find_roi_rect':
+            # find_roi_rect
+            corner_min, corner_max = finder.find_roi_rect(img, cam_height, cam)
+            int_ceil = lambda _: int(ceil(_))
+            corner_min, corner_max = tuple(map(int_ceil, corner_min)), tuple(map(int_ceil, corner_max))
+            print 'rect:', corner_min, corner_max
+            cv2.rectangle(img, corner_min, corner_max, (255, 0,0), 5)
+        
         if args.verbose > 0:
             print '%fs for %s' % (time.time()-t, img_path)
-        if args.view:
-            cv2.imshow('bah', img_orig)
+        if args.show:
+            if max(img.shape[:2]) > 500:
+                ratio = 500./max(img.shape[:2])
+                img = cv2.resize(img, (0, 0), fx=ratio, fy=ratio)
+            cv2.imshow('bah', img)
             while True:
                 if cv2.waitKey(1)&0xff == ord('q'):
                     break
