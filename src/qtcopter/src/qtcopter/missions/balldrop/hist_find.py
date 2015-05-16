@@ -8,6 +8,7 @@ center at 360, 250
 '''
 
 import cv2
+import sys
 import pylab
 import numpy as np
 from math import ceil
@@ -72,6 +73,8 @@ class HistogramFind(object):
         roi = find_roi(image, channel=self.channel,
                 rect_size=rect_size, overlap=rect_overlap)
         
+        if roi is None:
+            return None
         # resize back
         if ratio < 1:
             roi = (roi[0][0]/ratio, roi[0][1]/ratio), (roi[1][0]/ratio, roi[1][1]/ratio)
@@ -96,9 +99,8 @@ class HistogramFind(object):
 
     def find_roi_contours(self, image, height, camera):
         " Find ROI contours "
-        t = time.time()
         roi = self.find_roi_mask(image, height, camera)
-        img, contours, hier = cv2.findContours(roi, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+        contours, hier = cv2.findContours(roi, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
         return filter_contours(contours, cam_height, camera)
         
     @staticmethod
@@ -268,6 +270,8 @@ def find_roi(img, channel=1, rect_size=(RECT_SIZE_X, RECT_SIZE_Y),
         points.append((x, y))
         points.append((x+rect_size[0], y+rect_size[1]))
     points = np.array(points)
+    if len(points) == 0:
+        return None
     min = (np.min(points[:, 0]), np.min(points[:, 1]))
     max = (np.max(points[:, 0]), np.max(points[:, 1]))
 
@@ -321,9 +325,11 @@ if __name__ == '__main__':
         cam = Camera(args.camera)
         
         what = 'find_roi_contours'
+        #what = 'find_roi'
         if what == 'find_roi_contours':
             # find_roi_contours
             contours = finder.find_roi_contours(img, cam_height, cam)
+            print 'contours type:', type(contours), 'len:', len(contours)
             print 'contours:'
             for i, cont in enumerate(contours):
                 print i, 'area:', cv2.contourArea(cont), 
@@ -331,9 +337,15 @@ if __name__ == '__main__':
                 print 'rect:', rect
                 cv2.rectangle(img, rect[0:2], (rect[0]+rect[2], rect[1]+rect[3]), (255, 0,0), 5)
             cv2.drawContours(img, contours, -1, (0, 0, 255), 5)
-        elif what == 'find_roi_rect':
-            # find_roi_rect
-            corner_min, corner_max = finder.find_roi_rect(img, cam_height, cam)
+        elif what == 'find_roi':
+            # find_roi
+            rect = finder.find_roi(img, cam_height, cam)
+            if rect is None:
+                print 'rect type:', type(rect)
+            else:
+                print 'rect type:', type(rect), 'rect:', len(rect)
+            corner_min, corner_max = rect
+            #corner_min, corner_max = finder.find_roi(img, cam_height, cam)
             int_ceil = lambda _: int(ceil(_))
             corner_min, corner_max = tuple(map(int_ceil, corner_min)), tuple(map(int_ceil, corner_max))
             print 'rect:', corner_min, corner_max

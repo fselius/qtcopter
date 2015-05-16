@@ -41,6 +41,15 @@ CAMERAS['iphone 6 plus rect'] = {
     'width_dest_ratio': 1.13/3264, # in 3264 pixels we saw 113cm from 1m distance
     'height_dest_ratio': 1.13/3264, # =~ 0.85/2/2448
 }
+CAMERAS['lenovo e330'] = {
+    'full_name': 'Lenovo e330',
+    'max_resolution': (500, 375), # (1280, 960) ?
+    'max_resolution_fps': 30,
+    'resolutions': [(500, 375)],
+    'width_dest_ratio': 1.13/500, # TODO: fixme. this is a guess
+    'height_dest_ratio': 1.13/500, # =~ 0.85/2/2448
+}
+#DEFAULT_CAMERA = 'lenovo e330'
 DEFAULT_CAMERA = 'iphone 6 plus'
 #DEFAULT_CAMERA = 'CMLN-13S2C-CS 6mm'
 

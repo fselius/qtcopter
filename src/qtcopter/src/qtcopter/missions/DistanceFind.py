@@ -18,13 +18,13 @@ class DistanceFind:
         roi_mask = cv2.inRange(image, self.lower, self.upper)
         return roi_mask
 
-    def find_roi_contours(self, image):
+    def find_roi_contours(self, image, **kw):
         roi_mask = self.find_roi_mask(image)
         img, contours, hier = cv2.findContours(roi_mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
         self.debug_output(image, roi_mask)
         return contours
 
-    def find_roi(self, image):
+    def find_roi(self, image, **kw):
         roi_mask = self.find_roi_mask(image)
         y_indices, x_indices = np.where(roi_mask)
         self.debug_output(image, roi_mask)
