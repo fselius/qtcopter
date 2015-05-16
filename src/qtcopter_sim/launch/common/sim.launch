@@ -8,9 +8,16 @@
 
   <!-- Camera -->
   <node pkg="qtcopter_sim" type="imagepub" name="publish_image" args="/image $(arg image_path) -r 50" unless="$(arg camera)" />
+
+  <!-- usb cam -->
   <node pkg="usb_cam" type="usb_cam_node" name="publish_image" if="$(arg camera)">
     <remap from="publish_image/image_raw" to="image" />
   </node>
+
+  <!-- ptgrey -->
+  <!--node pkg="pointgrey_camera_driver" type="camera_node" name="publish_image">
+    <remap from="publish_image/image_color" to="image" />
+  </node-->
 
   <!-- Transform to center of quadcopter -->
   <node pkg="tf" type="static_transform_publisher" name="camera_to_quadcopter" args="0 0 0.2 1.57075 0 0 camera quadcopter 100" />
