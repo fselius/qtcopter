@@ -37,7 +37,7 @@ To run tests with a static image (in separate terminals):
 ```
 $ roscore
 $ roslaunch qtcopter_sim sim.launch camera:=false image_path:=path/to/image
-$ rosrun qtcopter <mission>
+$ roslaunch qtcopter <mission>.launch
 ```
 
 To run tests with a connected camera (in separate terminals):
@@ -45,7 +45,7 @@ To run tests with a connected camera (in separate terminals):
 ```
 $ roscore
 $ roslaunch qtcopter_sim sim.launch
-$ rosrun qtcopter <mission>
+$ roslaunch qtcopter <mission>.launch
 ```
 
 Or use `roslaunch qtcopter_sim <mission>.launch`.

@@ -3,6 +3,7 @@
 from qtcopter.missions import DistanceFind
 #from qtcopter.missions.balloon.blob_find import find_balloon
 from qtcopter.missions import ObjectFindMission
+import rospy
 
 
 def find_balloon(image):
@@ -11,6 +12,8 @@ def find_balloon(image):
 
 if __name__ == '__main__':
     # Search for color red (color ordering is BGR)
-    finder = DistanceFind((17, 15, 100), (90, 96, 200))
-    mission = ObjectFindMission('balloon_mission', finder.find_roi, find_balloon)
+    coarse_finder = DistanceFind(rospy.get_param('balloon/color/lower_bound'),
+                                 rospy.get_param('balloon/color/upper_bound'))
+    mission = ObjectFindMission('balloon_mission', coarse_finder.find_roi,
+                                find_balloon)
     mission.execute()

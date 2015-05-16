@@ -1,0 +1,12 @@
+<launch>
+  <node pkg="qtcopter" type="balldrop" name="balldrop_mission" output="screen">
+  </node>
+  <rosparam ns="target">
+    center_black: True
+    black_rings: 3
+    ring_width: 150.0
+    color:
+      lower_bound: [200, 200, 200]
+      upper_bound: [255, 255, 255]
+  </rosparam>
+</launch>
