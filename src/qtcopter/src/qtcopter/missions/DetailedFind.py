@@ -3,7 +3,7 @@ from .balldrop.coords import cam_pixel_to_xy
 import rospy
 import cv2
 import tf
-
+from ..navigation.Camera import default_camera
 
 class DetailedFind(MissionState):
     def __init__(self, debug_pub, find_object_center_func):
@@ -18,20 +18,29 @@ class DetailedFind(MissionState):
 
     def publish_offset(self, center, estimated_size):
         # Get size of target in millimeters
-        real_size = rospy.get_param('target/size')
+        real_size = rospy.get_param('target/size')/1000.0 # meters!
 
         image_width = rospy.get_param('camera/image_width')
         image_height = rospy.get_param('camera/image_height')
 
         # Get offset in pixels
         offset = [center[0]-image_width/2.0, center[1]-image_height/2.0]
-
         # Get distance in millimetres
+
+        # find size at 1meter
+        p1 = (center[0]-estimated_size/2.0, center[1])
+        p2 = (center[0]+estimated_size/2.0, center[1])
+        p1 = default_camera.get_ground_offset(p1, 1)
+        p2 = default_camera.get_ground_offset(p2, 1)
+        size_at_1m = cv2.norm(p1, p2)
+        distance = real_size/size_at_1m # estimated :)
+
+        offset = default_camera.get_ground_offset(center, distance)
         # TODO: f from camera calibration
-        f = 28
-        distance = f*real_size/estimated_size
-        offset[0] = f*offset[0]/distance
-        offset[1] = f*offset[1]/distance
+        #f = 28
+        #distance = f*real_size/estimated_size
+        #offset[0] = f*offset[0]/distance
+        #offset[1] = f*offset[1]/distance
 
         # Send a default angle
         angle = tf.transformations.quaternion_from_euler(0, 0, 0)
@@ -82,7 +91,7 @@ class DetailedFind(MissionState):
                 rospy.logdebug('Publishing center location of target.')
                 cv2.rectangle(image, min, max, (255, 0, 0))
                 if center is not None:
-                    cv2.circle(image, center, int(height*10),
+                    cv2.circle(image, center, int(size/2.0),
                                (0, 255, 0), -1)
                 return image
             self.debug_publish(draw_center_location)

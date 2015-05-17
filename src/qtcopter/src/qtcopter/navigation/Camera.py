@@ -43,11 +43,11 @@ CAMERAS['iphone 6 plus rect'] = {
 }
 CAMERAS['lenovo e330'] = {
     'full_name': 'Lenovo e330',
-    'max_resolution': (542, 406), # (1280, 960) ?
+    'max_resolution': (640, 480),
     'max_resolution_fps': 30,
-    'resolutions': [(500, 375)],
-    'width_dest_ratio': 1.13/500, # TODO: fixme. this is a guess
-    'height_dest_ratio': 1.13/500, # =~ 0.85/2/2448
+    'resolutions': [(640, 480)],
+    'width_dest_ratio': 0.875/640,
+    'height_dest_ratio': 0.875/640,
 }
 DEFAULT_CAMERA = 'lenovo e330'
 #DEFAULT_CAMERA = 'iphone 6 plus'

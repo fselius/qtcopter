@@ -16,6 +16,7 @@ if __name__ == '__main__':
 
     detailed_finder = PolarityFind(rospy.get_param('target/center_black'),
                                    rospy.get_param('target/black_rings'))
-    mission = ObjectFindMission('balldrop_mission', coarse_finder.find_roi_contours,
+    #mission = ObjectFindMission('balldrop_mission', coarse_finder.find_roi_contours,
+    mission = ObjectFindMission('balldrop_mission', None,
                                 detailed_finder.find_target)
     mission.execute()

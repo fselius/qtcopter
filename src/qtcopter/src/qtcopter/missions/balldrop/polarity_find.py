@@ -66,6 +66,7 @@ class PolarityFind:
                 #    continue
 
                 if inner_counter > 3:
+                    # TODO/FIXME: This returns the diameter of the inner white circle!
                     # TODO: check all circles (parents)
                     moments = cv2.moments(contours[idx])
                     x = int(moments['m10']/moments['m00'])
