@@ -10,7 +10,6 @@ Usage:
 import cv2
 import numpy as np
 
-
 class PolarityFind:
     def __init__(self, center_black, number_of_rings):
         self._center_black = center_black
@@ -19,7 +18,9 @@ class PolarityFind:
     def find_contours(self, image):
         image = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
         image = cv2.medianBlur(image, 13)
-        _, threshold = cv2.threshold(image, 180, 1, cv2.THRESH_BINARY)
+        # TODO: Fix the threshold. It worked better for us with 100, but we need to test.
+        #_, threshold = cv2.threshold(image, 180, 1, cv2.THRESH_BINARY)
+        _, threshold = cv2.threshold(image, 100, 1, cv2.THRESH_BINARY)
 
         if threshold is None or threshold.size == 0:
             return None, None
@@ -36,9 +37,10 @@ class PolarityFind:
         '''
         Return the center of the target in pixel coordinates as tuple (x, y).
         '''
+
         contours, hierarchy = self.find_contours(image)
         if contours is None or hierarchy is None:
-            return None
+            return (None, None)
 
         # Find leaf contours with parent and at least 50 points.
         leaf_contours_idx = [i for i, c in enumerate(contours) if len(c) >= 50 and
@@ -77,10 +79,13 @@ if __name__ == '__main__':
     import sys
     image = cv2.imread(sys.argv[1])
 
-    # FIXME: add parameters
-    center = PolarityFind().find_target(image)
-
-    cv2.circle(image, center, 5, (0, 0, 255), 5)
-    cv2.imshow('model', image)
-    cv2.waitKey(0)
-    cv2.destroyAllWindows()
+    center, size = PolarityFind(True, 3).find_target(image)
+    print 'center:', center
+    if center is not None:
+        cv2.circle(image, center, 5, (0, 0, 255), 5)
+        cv2.imshow('model', image)
+        cv2.waitKey(0)
+        cv2.destroyAllWindows()
+    else:
+        print 'could not find target'
+        

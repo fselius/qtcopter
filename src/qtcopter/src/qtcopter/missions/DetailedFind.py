@@ -9,7 +9,7 @@ class DetailedFind(MissionState):
     def __init__(self, debug_pub, find_object_center_func):
         MissionState.__init__(self,
                               debug_pub,
-                              input_keys=['roi'],
+                              input_keys=['rois'],
                               outcomes=['succeeded',
                                         'aborted',
                                         'failed'])
@@ -24,7 +24,7 @@ class DetailedFind(MissionState):
         image_height = rospy.get_param('camera/image_height')
 
         # Get offset in pixels
-        offset = (center[0]-image_width/2.0, center[1]-image_height/2.0)
+        offset = [center[0]-image_width/2.0, center[1]-image_height/2.0]
 
         # Get distance in millimetres
         # TODO: f from camera calibration
@@ -35,7 +35,6 @@ class DetailedFind(MissionState):
 
         # Send a default angle
         angle = tf.transformations.quaternion_from_euler(0, 0, 0)
-
         if rospy.get_param('camera/pointing_downwards'):
             # Camera points to the ground
             # -> distance to object is z coordinate
@@ -46,7 +45,9 @@ class DetailedFind(MissionState):
             # -> distance to object is y coordinate
             x, z = offset
             y = distance
-
+        # TODO (vasily): I don't know how to read the sendTransform info.
+        # Remove after we know.. :P
+        print 'sendTransform():', (x, y, z)
         self._pub.sendTransform((x, y, z),
                                 angle,
                                 rospy.Time.now(),
@@ -60,36 +61,39 @@ class DetailedFind(MissionState):
         If the target is lost, return 'failed'.
         If the optimal position is reached, return 'succeeded'.
         '''
-        # Cut out ROI
-        min, max = userdata.roi
-        rospy.loginfo('Searching for target in ROI '
-                      '({0:d}, {1:d}), ({2:d}, {3:d}).'.format(min[0],
-                                                               min[1],
-                                                               max[0],
-                                                               max[1]))
-        cropped_image = image[min[1]:max[1], min[0]:max[0]]
+        for cont in userdata.rois:
+            rect = cv2.boundingRect(cont)
+            # Cut out ROI
+            min, max = (rect[0], rect[1]), (rect[0]+rect[2], rect[1]+rect[3])
+            rospy.loginfo('Searching for target in ROI '
+                          '({0:d}, {1:d}), ({2:d}, {3:d}).'.format(min[0],
+                                                                   min[1],
+                                                                   max[0],
+                                                                   max[1]))
+            cropped_image = image[min[1]:max[1], min[0]:max[0]]
 
-        # Find center of target
-        center, size = self._find_object_center(cropped_image)
-        if center is not None:
-            # Add offset to uncropped image
-            center = (int(center[0] + min[0]), int(center[1] + min[1]))
-
-        def draw_center_location():
-            rospy.logdebug('Publishing center location of target.')
-            cv2.rectangle(image, userdata.roi[0], userdata.roi[1], (255, 0, 0))
+            # Find center of target
+            center, size = self._find_object_center(cropped_image)
             if center is not None:
-                cv2.circle(image, center, int(height*10),
-                           (0, 255, 0), -1)
-            return image
-        self.debug_publish(draw_center_location)
+                # Add offset to uncropped image
+                center = (int(center[0] + min[0]), int(center[1] + min[1]))
 
-        if center is None:
-            rospy.loginfo('Lost target, try finding it again.')
-            return 'failed'
+            def draw_center_location():
+                rospy.logdebug('Publishing center location of target.')
+                cv2.rectangle(image, min, max, (255, 0, 0))
+                if center is not None:
+                    cv2.circle(image, center, int(height*10),
+                               (0, 255, 0), -1)
+                return image
+            self.debug_publish(draw_center_location)
 
-        rospy.logdebug('Publishing offset to target.')
-        self.publish_offset(center, size)
-        # TODO: when mission finished:
-        #  return 'succeeded'
-        return None
+            if center is not None:
+                rospy.logdebug('Publishing offset to target.')
+                self.publish_offset(center, size)
+                # TODO: when mission finished:
+                #  return 'succeeded'
+                return None
+
+        rospy.loginfo('Lost target, try finding it again.')
+        return 'failed'
+

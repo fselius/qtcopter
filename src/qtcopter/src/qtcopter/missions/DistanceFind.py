@@ -19,8 +19,11 @@ class DistanceFind:
         return roi_mask
 
     def find_roi_contours(self, image, **kw):
+        # TODO: white blob detection doesn't work too well -- it doesn't detect
+        # the edges of the balldrop circle target. Meanwhile, we can return the
+        # enclosing rectangle (TODO)
         roi_mask = self.find_roi_mask(image)
-        img, contours, hier = cv2.findContours(roi_mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+        contours, hier = cv2.findContours(roi_mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
         self.debug_output(image, roi_mask)
         return contours
 

@@ -12,7 +12,8 @@ import sys
 import pylab
 import numpy as np
 from math import ceil
-from .utils import filter_contours, TARGET_RADIUS
+from .utils import filter_contours
+import rospy
 
 from qtcopter.navigation.Camera import Camera
 
@@ -56,6 +57,17 @@ except AttributeError:
 #########
 
 
+def debug_image(img, max_size=500):
+    if max(img.shape[:2]) > max_size:
+        ratio = 1.0*max_size/max(img.shape[:2])
+        img = cv2.resize(img, (0, 0), fx=ratio, fy=ratio)
+    cv2.imshow('bah', img)
+    while True:
+        if cv2.waitKey(1)&0xff == ord('q'):
+            break
+
+    cv2.destroyWindow('bah')
+
 class HistogramFind(object):
     def __init__(self, resize=500, channel=HLS_LIGHT_CHANNEL):
         self.resize = resize
@@ -72,7 +84,6 @@ class HistogramFind(object):
         rect_overlap = map(lambda _: int(ceil(RATIO_RECT_TO_OVERLAP*_)), rect_size)
         roi = find_roi(image, channel=self.channel,
                 rect_size=rect_size, overlap=rect_overlap)
-        
         if roi is None:
             return None
         # resize back
@@ -90,25 +101,30 @@ class HistogramFind(object):
         image = get_light(image, channel=self.channel)
         # find size of rectangle
         rect_size = map(lambda _: int(ceil(_*ratio)), self.get_rect_size(height, camera))
+        rospy.logdebug('HistogramFind rect_size=%r, image size=%r' % (rect_size, image.shape))
         rect_overlap = map(lambda _: int(ceil(RATIO_RECT_TO_OVERLAP*_)), rect_size)
         roi = roi_hist_ex(image, rect_size, rect_overlap)
         # resize back
         if ratio < 1:
-            roi = cv2.resize(roi, original_shape[:2])
+            roi = cv2.resize(roi, original_shape[:2][::-1])
         return roi
 
     def find_roi_contours(self, image, height, camera):
         " Find ROI contours "
         roi = self.find_roi_mask(image, height, camera)
         contours, hier = cv2.findContours(roi, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
-        return filter_contours(contours, cam_height, camera)
+        # filter out bad contours - TODO: make sure this works
+        #contours = filter_contours(contours, height, camera)
+        # sort by area
+        return sorted(contours, reverse=True, key=lambda c: cv2.contourArea(c))
         
     @staticmethod
     def get_rect_size(height, camera):
         " Get rectangle size for histogram "
+        radius = rospy.get_param('target/size')/1000.0/2.0
         zero = camera.get_camera_offset((0, 0), height) # yep, this will most likely be zero..
-        # TODO: Decide how big the histogram should be. Currently as big as TARGET_RADIUS.
-        bah = camera.get_camera_offset((TARGET_RADIUS, TARGET_RADIUS), height)
+        # TODO: Decide how big the histogram should be. Currently as big as target radius.
+        bah = camera.get_camera_offset((radius, radius), height)
         rect_size = abs(bah[0]-zero[0]), abs(bah[1]-zero[1])
         return rect_size
 
@@ -119,6 +135,7 @@ def get_light(image, channel=HLS_LIGHT_CHANNEL):
     image = cv2.cvtColor(image, cv2.COLOR_BGR2HLS)
     # take relevant channel
     x = cv2.split(image)[channel]
+    #x = cv2.blur(x, (3, 3))
     return x
 
 def resize(img, max_size):
@@ -161,26 +178,21 @@ def find_edges(hist, cut=0.05):
 def is_black_white(hist):
     " decide whether histogram is of black/white pattern "
     low, high = find_edges(hist)    
-    #print 'low, high, total hist length:', low, high, len(hist)
-
-    #hist = hist[low:high+1]
 
     # take lower and upper % buckets (darkest + lightest), if they
     # contain more than threshold, good
     BUCKETS = 0.05 # precentage of lower and upper
     THRESHOLD = 0.5 # how much these buckets should have
-
-    buckets = int(BUCKETS*(high-low+1))
-    #buckets = int(BUCKETS*len(hist))
+    THRESHOLD_SIDE = 0.1 # how much right/left bucket should have minimum
+    # round up buckets number
+    buckets = int(ceil(BUCKETS*(high-low+1)))
     # TODO: in case BUCKETS*len(hist) is not a whole, should we take part
     # of the next bucket as well?
     sides_sum = hist[low:low+buckets].sum() + hist[high-buckets:high+1].sum()
-    #sides_sum = sum(hist[:buckets]) + sum(hist[-buckets:])
-    #print 'low:', 1.0*sum(hist[:buckets])/sum(hist), 'high:', 1.0*sum(hist[-buckets:])/sum(hist), 'total:', 1.0*sides_sum/sum(hist)
-    #if 1.0*sides_sum/sum(hist) > THRESHOLD:
-    return 1.0*sides_sum/hist[low:high+1].sum() > THRESHOLD
-#return 1.0*sides_sum > hist[low:high+1].sum()*THRESHOLD
 
+    return (1.0*sides_sum/hist[low:high+1].sum() > THRESHOLD) and\
+            (1.0*hist[low:low+buckets].sum()/hist[low:high+1].sum() > THRESHOLD_SIDE) and\
+            (1.0*hist[high-buckets:high+1].sum()/hist[low:high+1].sum() > THRESHOLD_SIDE)
 
 @profile
 def hist_rect(channel, x=0, y=0, width=None, height=None, max_value=255):
@@ -204,7 +216,6 @@ def hist_rect(channel, x=0, y=0, width=None, height=None, max_value=255):
 
 def iter_rect(x, y, width, height, rect_size, overlap):
     " generate rectangle coordinates "
-    i=0
     # TODO: Currently we don't handle cases when right\bottom edge isn't
     # at round boundary (i.e. not multiple of rect_width-overlap_x)
     # we should probably also yield last row/column end the end to check
@@ -212,8 +223,6 @@ def iter_rect(x, y, width, height, rect_size, overlap):
     for row in range(x, width-rect_size[0]+1, rect_size[0]-overlap[0]):
         for col in range(y, height-rect_size[1]+1, rect_size[1]-overlap[1]):
             yield row, col, rect_size[0], rect_size[1]
-            i+=1
-    #print 'loops:', i
 
 @profile
 def hist_iter_rects(channel, rect_size, overlap, hist_filter=is_black_white):
@@ -254,7 +263,7 @@ def roi_hist(img, channel=1, hist_filter=is_black_white,
     roi = roi_hist_ex(img, rect_size, rect_overlap, hist_filter)
     if resize is not None:
         # resize roi
-        roi = cv2.resize(roi, original_shape)
+        roi = cv2.resize(roi, original_shape[::-1])
     return roi
 '''
 ###########################
@@ -322,7 +331,12 @@ if __name__ == '__main__':
             continue
 
         cam_height = args.height # roees height
-        cam = Camera(args.camera)
+        try:
+            cam = Camera(args.camera)
+        except:
+            print 'Could not use camera %r' % (args.camera,)
+            print 'Available cameras:', Camera.get_cameras()
+            sys.exit(1)
         
         what = 'find_roi_contours'
         #what = 'find_roi'
@@ -354,13 +368,5 @@ if __name__ == '__main__':
         if args.verbose > 0:
             print '%fs for %s' % (time.time()-t, img_path)
         if args.show:
-            if max(img.shape[:2]) > 500:
-                ratio = 500./max(img.shape[:2])
-                img = cv2.resize(img, (0, 0), fx=ratio, fy=ratio)
-            cv2.imshow('bah', img)
-            while True:
-                if cv2.waitKey(1)&0xff == ord('q'):
-                    break
-
-            cv2.destroyWindow('bah')
+            debug_image(img)
 

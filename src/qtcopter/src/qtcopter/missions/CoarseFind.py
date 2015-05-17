@@ -3,6 +3,18 @@ import rospy
 import cv2
 from qtcopter.navigation.Camera import default_camera
 from .balldrop.utils import center_of_mass
+import numpy as np
+
+def rect_contour(rect):
+    " create contour from rectangle "
+    # rect = (x, y, width, height)
+    pts = [
+        [[rect[0], rect[1]]],
+        [[rect[0]+rect[2]-1, rect[1]]],
+        [[rect[0]+rect[2]-1, rect[1]+rect[3]-1]],
+        [[rect[0], rect[1]+rect[3]-1]]
+    ]
+    return np.array(pts, dtype=np.int32)
 
 class CoarseFind(MissionState):
     def __init__(self, debug_pub, find_roi_func, camera=default_camera):
@@ -10,23 +22,29 @@ class CoarseFind(MissionState):
                               debug_pub,
                               outcomes=['succeeded',
                                         'aborted'],
-                              output_keys=['roi'])
+                              output_keys=['rois'])
         if find_roi_func is None:
             rospy.logwarn('CoarseFind: Using dummy ROI finder function.')
-            self._find_roi = lambda image: ((0, 0), (image.shape[1], image.shape[0]))
+            self._find_roi = lambda image, **kw: [rect_contour((0, 0, image.shape[1], image.shape[0]))]
         else:
             self._find_roi = find_roi_func
         self._camera = camera
-    def publish_offset(self, height, roi):
+    def publish_offset(self, height, rois):
         # for balldrop, move towards target
         # otherwise, just continue with detailed find
         if not rospy.get_param('camera/pointing_downwards') or height<2:
             return 'succeeded'
 
+        # choose first ROI (should be sorted)
+        roi = rois[0]
         image_width = rospy.get_param('camera/image_width')
         image_height = rospy.get_param('camera/image_height')
-        
-        center = (roi[0][0]+roi[1][0])/2, (roi[0][1]+roi[1][1])/2
+
+        # TODO: find ROI center. Currently simply center of bounding rectangle,
+        # but we can use center of mass
+        rect = cv2.boundingRect(roi)
+        center = (rect[0]+rect[2]/2.0, rect[1]+rect[3]/2.0)
+
         # Get offset in pixels
         offset = (center[0]-image_width/2.0, center[1]-image_height/2.0)
         offset_px = offset[:]
@@ -51,11 +69,11 @@ class CoarseFind(MissionState):
 
        
         # if target near edge, move to edge
-        is_close = lambda value, size: 1.0*value/size<0.1 or 1.0*(size-value)/size<0.1
-        close_left  = is_close(roi[0][0], image_width)
-        close_top   = is_close(roi[0][1], image_height)
-        close_right = is_close(roi[1][0], image_width)
-        close_bot   = is_close(roi[1][0], image_height)
+        is_edge_close = lambda value, size: 1.0*value/size<0.1 or 1.0*(size-value)/size<0.1
+        close_left  = is_edge_close(rect[0][0], image_width)
+        close_top   = is_edge_close(rect[0][1], image_height)
+        close_right = is_edge_close(rect[0][0]+rect[1][0], image_width)
+        close_bot   = is_edge_close(rect[0][1]+rect[1][1], image_height)
     
         # if ROI is not close to edge..
         if not (close_left or close_top or close_right or close_bot):
@@ -78,20 +96,21 @@ class CoarseFind(MissionState):
         '''
         Runs the "coarse find" algorithm and returns a region of interest.
         '''
-        rospy.loginfo('Trying to find coarse ROI in image.')
-        roi = self._find_roi(image, height=height, camera=self._camera)
+        rospy.loginfo('Trying to find coarse ROI in image, height = ' + str(height))
+        rois = self._find_roi(image, height=height, camera=self._camera)
 
         def draw_roi():
             rospy.logdebug('Publishing coarse ROI.')
-            if roi is not None:
-                cv2.rectangle(image, roi[0], roi[1], (255, 0, 0))
+            for i, cont in enumerate(rois):
+                rect = cv2.boundingRect(cont)
+                cv2.rectangle(image, rect[0:2], (rect[0]+rect[2], rect[1]+rect[3]), (0, 0, 255))
             return image
 
-        if roi is None or len(roi)==0:
+        if rois is None or len(rois)==0:
             return None
-        roi = (int(roi[0][0]), int(roi[0][1])), (int(roi[1][0]), int(roi[1][1]))
+
         self.debug_publish(draw_roi)
-        
-        userdata.roi = roi
-        return self.publish_offset(height, roi)
+
+        userdata.rois = rois
+        return self.publish_offset(height, rois)
 

@@ -1,15 +1,21 @@
 #!/usr/bin/env python2
 
 from qtcopter.missions import DistanceFind
+from qtcopter.missions.balldrop.hist_find import HistogramFind
 from qtcopter.missions.balldrop import PolarityFind
 from qtcopter.missions import ObjectFindMission
 import rospy
 
 if __name__ == '__main__':
-    coarse_finder = DistanceFind(rospy.get_param('target/color/lower_bound'),
-                                 rospy.get_param('target/color/upper_bound'))
+    coarse_alg = rospy.get_param('target/coarse_algorithm')
+    if coarse_alg == 'distance':
+        coarse_finder = DistanceFind(rospy.get_param('target/color/lower_bound'),
+                                     rospy.get_param('target/color/upper_bound'))
+    else: # 'histogram'
+        coarse_finder = HistogramFind()
+
     detailed_finder = PolarityFind(rospy.get_param('target/center_black'),
                                    rospy.get_param('target/black_rings'))
-    mission = ObjectFindMission('balldrop_mission', coarse_finder.find_roi,
+    mission = ObjectFindMission('balldrop_mission', coarse_finder.find_roi_contours,
                                 detailed_finder.find_target)
     mission.execute()
