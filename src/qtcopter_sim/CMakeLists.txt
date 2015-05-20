@@ -6,6 +6,7 @@ project(qtcopter_sim)
 ## is used, also find other catkin packages
 find_package(catkin
   REQUIRED COMPONENTS
+  gazebo_ros
   qtcopter)
 
 ###################################
@@ -20,6 +21,6 @@ find_package(catkin
 catkin_package(
 #  INCLUDE_DIRS include
 #  LIBRARIES qtcopter
-#  CATKIN_DEPENDS other_catkin_pkg
+  CATKIN_DEPENDS gazebo_ros qtcopter
 #  DEPENDS system_lib
 )

@@ -41,11 +41,13 @@
   <!--   <test_depend>gtest</test_depend> -->
   <buildtool_depend>catkin</buildtool_depend>
   <build_depend>qtcopter</build_depend>
+  <build_depend>gazebo_ros</build_depend>
   <run_depend>qtcopter</run_depend>
+  <run_depend>gazebo_ros</run_depend>
 
   <!-- The export tag contains other, unspecified, tags -->
   <export>
     <!-- Other tools can request additional information be placed here -->
-
+    <gazebo_ros gazebo_media_path="${prefix}" />
   </export>
 </package>
