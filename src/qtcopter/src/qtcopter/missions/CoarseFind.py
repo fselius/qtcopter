@@ -20,8 +20,9 @@ def rect_contour(rect):
     return np.array(pts, dtype=np.int32)
 
 class CoarseFind(MissionState):
-    def __init__(self, debug_pub, find_roi_func, camera=default_camera):
+    def __init__(self, delta_pub, debug_pub, find_roi_func, camera=default_camera):
         MissionState.__init__(self,
+                              delta_pub,
                               debug_pub,
                               outcomes=['succeeded',
                                         'aborted'],
@@ -64,18 +65,18 @@ class CoarseFind(MissionState):
         x, y = offset
         z = 0 # stay at same height
 
-       
+
         # if target near edge, move to edge
         is_edge_close = lambda value, size: 1.0*value/size<0.1 or 1.0*(size-value)/size<0.1
         close_left  = is_edge_close(rect[0], image_width)
         close_top   = is_edge_close(rect[1], image_height)
         close_right = is_edge_close(rect[0]+rect[2], image_width)
         close_bot   = is_edge_close(rect[1]+rect[3], image_height)
-    
+
         # if ROI is not close to edge..
         if not (close_left or close_top or close_right or close_bot):
             return 'succeeded'
-        
+
         # if center of mass is nearby, don't move
         if abs(offset_px[0]/image_width) < 0.2 and abs(offset_px[1]/image_height) < 0.2:
             return 'succeeded'
@@ -88,7 +89,7 @@ class CoarseFind(MissionState):
                         'target')
         # continue with coarse find until we are above ROI
         return None
-       
+
     def on_execute(self, userdata, image, height):
         '''
         Runs the "coarse find" algorithm and returns a region of interest.
@@ -107,7 +108,7 @@ class CoarseFind(MissionState):
         if rois is None or len(rois)==0:
             return None
 
-        self.debug_publish(draw_roi)
+        self.publish_debug_image(draw_roi)
 
         userdata.rois = rois
         return self.publish_offset(height, rois)

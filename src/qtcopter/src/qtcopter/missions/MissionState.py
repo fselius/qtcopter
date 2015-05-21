@@ -7,11 +7,12 @@ import threading
 
 
 class MissionState(smach.State):
-    def __init__(self, debug_pub, outcomes=[], input_keys=[], output_keys=[]):
+    def __init__(self, delta_pub, debug_pub, outcomes=[], input_keys=[], output_keys=[]):
         smach.State.__init__(self,
                              outcomes=outcomes,
                              input_keys=input_keys,
                              output_keys=output_keys)
+        self._delta_pub = delta_pub
         self._debug_pub = debug_pub
         self._trigger_event = threading.Event()
         self._bridge = CvBridge()
@@ -19,7 +20,19 @@ class MissionState(smach.State):
         self._output_keys = output_keys
         rospy.logdebug('%s initialized.'.format(self))
 
-    def debug_publish(self, callback):
+    def publish_delta(self, camera_frame, translation, theta):
+        rospy.logdebug('Publish delta: x {0}, y {1}, z {2}, theta {3}'.format(translation[0],
+           translation[1],
+           translation[2],
+           theta))
+        rotation = tf.transformations.quaternion_from_euler((0, 0, theta))
+        self._delta_pub.sendTransform(translation,
+                                      rotation,
+                                      rospy.Time.now(),
+                                      'waypoint',
+                                      camera_frame)
+
+    def publish_debug_image(self, callback):
         if self._debug_pub.get_num_connections() <= 0:
             return
 
@@ -68,8 +81,8 @@ class MissionState(smach.State):
 
         self._trigger_event.clear()
 
-        self._height_sub = Subscriber('/height', Range)
-        self._image_sub = Subscriber('/image', Image)
+        self._height_sub = Subscriber('height', Range)
+        self._image_sub = Subscriber('image', Image)
         sync = ApproximateTimeSynchronizer([self._height_sub, self._image_sub],
                                            queue_size=1, slop=0.05)
 

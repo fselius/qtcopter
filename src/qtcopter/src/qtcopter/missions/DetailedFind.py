@@ -1,24 +1,23 @@
 from . import MissionState
-from .balldrop.coords import cam_pixel_to_xy
 import rospy
 import cv2
-import tf
 from ..navigation.Camera import default_camera
 
+
 class DetailedFind(MissionState):
-    def __init__(self, debug_pub, find_object_center_func):
+    def __init__(self, delta_pub, debug_pub, find_object_center_func):
         MissionState.__init__(self,
+                              delta_pub,
                               debug_pub,
                               input_keys=['rois'],
                               outcomes=['succeeded',
                                         'aborted',
                                         'failed'])
         self._find_object_center = find_object_center_func
-        self._pub = tf.TransformBroadcaster()
 
     def publish_offset(self, center, estimated_size):
         # Get size of target in millimeters
-        real_size = rospy.get_param('target/size')/1000.0 # meters!
+        real_size = rospy.get_param('target/size')/1000.0  # meters!
 
         image_width = rospy.get_param('camera/image_width')
         image_height = rospy.get_param('camera/image_height')
@@ -33,7 +32,7 @@ class DetailedFind(MissionState):
         p1 = default_camera.get_ground_offset(p1, 1)
         p2 = default_camera.get_ground_offset(p2, 1)
         size_at_1m = cv2.norm(p1, p2)
-        distance = real_size/size_at_1m # estimated :)
+        distance = real_size/size_at_1m  # estimated :)
 
         offset = default_camera.get_ground_offset(center, distance)
         # TODO: f from camera calibration
@@ -42,26 +41,20 @@ class DetailedFind(MissionState):
         #offset[0] = f*offset[0]/distance
         #offset[1] = f*offset[1]/distance
 
-        # Send a default angle
-        angle = tf.transformations.quaternion_from_euler(0, 0, 0)
         if rospy.get_param('camera/pointing_downwards'):
             # Camera points to the ground
             # -> distance to object is z coordinate
             x, y = offset
             z = distance
+            camera_frame = 'downward_cam_optical_frame'
         else:
             # Camera is facing forward
             # -> distance to object is y coordinate
             x, z = offset
             y = distance
-        # TODO (vasily): I don't know how to read the sendTransform info.
-        # Remove after we know.. :P
-        print 'sendTransform():', (x, y, z)
-        self._pub.sendTransform((x, y, z),
-                                angle,
-                                rospy.Time.now(),
-                                'camera',
-                                'target')
+            camera_frame = 'cam_optical_frame'
+
+        self.publish_delta(camera_frame, (x, y, z), 0)
 
     def on_execute(self, userdata, image, height):
         '''
@@ -107,9 +100,8 @@ class DetailedFind(MissionState):
                 cv2.circle(image, center, int(size/2.0),
                            (0, 255, 0), -1)
             return image
-        self.debug_publish(draw_center_location)
 
+        self.debug_publish(draw_center_location)
 
         rospy.loginfo('Lost target, try finding it again.')
         return return_value
-
