@@ -6,6 +6,9 @@
   <arg name="debug" default="false"/>
   <arg name="world" />
   <arg name="camera_pointing_downwards" />
+  <arg name="x" default="0.0" />
+  <arg name="y" default="0.0" />
+  <arg name="z" default="0.3" />
 
   <include file="$(find gazebo_ros)/launch/empty_world.launch">
     <arg name="paused" value="$(arg paused)"/>
@@ -16,6 +19,14 @@
     <arg name="world_name" value="$(find qtcopter_sim)/worlds/$(arg world)_world.sdf" />
   </include>
 
-  <include file="$(find hector_quadrotor_gazebo)/launch/spawn_quadrotor_with_downward_cam.launch" if="$(arg camera_pointing_downwards)" />
-  <include file="$(find hector_quadrotor_gazebo)/launch/spawn_quadrotor_with_cam.launch" unless="$(arg camera_pointing_downwards)" />
+  <include file="$(find hector_quadrotor_gazebo)/launch/spawn_quadrotor_with_downward_cam.launch" if="$(arg camera_pointing_downwards)">
+    <arg name="x" value="$(arg x)" />
+    <arg name="y" value="$(arg y)" />
+    <arg name="z" value="$(arg z)" />
+  </include>
+  <include file="$(find hector_quadrotor_gazebo)/launch/spawn_quadrotor_with_cam.launch" unless="$(arg camera_pointing_downwards)">
+    <arg name="x" value="$(arg x)" />
+    <arg name="y" value="$(arg y)" />
+    <arg name="z" value="$(arg z)" />
+  </include>
 </launch>
