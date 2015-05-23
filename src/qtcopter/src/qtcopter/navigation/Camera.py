@@ -49,10 +49,10 @@ CAMERAS['lenovo e330'] = {
     'width_dest_ratio': 0.875/640,
     'height_dest_ratio': 0.875/640,
 }
-DEFAULT_CAMERA = 'lenovo e330'
+#DEFAULT_CAMERA = 'lenovo e330'
 #DEFAULT_CAMERA = 'iphone 6 plus'
 #DEFAULT_CAMERA = 'CMLN-13S2C-CS 6mm'
-
+DEFAULT_CAMERA = 'CMLN-13S2C-CS 9mm'
 
 class Camera(object):
     ''' A class representing a camera. This can be either the current camera,

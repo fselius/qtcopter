@@ -17,6 +17,8 @@ class PolarityFind:
 
     def find_contours(self, image):
         image = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
+        # TODO: Should we add more blur? Looked like polarity find worked
+        # better with unfocused pictures.
         image = cv2.medianBlur(image, 13)
         # TODO: Fix the threshold. It worked better for us with 100, but we need to test.
         #_, threshold = cv2.threshold(image, 180, 1, cv2.THRESH_BINARY)

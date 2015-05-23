@@ -11,12 +11,15 @@ if __name__ == '__main__':
     if coarse_alg == 'distance':
         coarse_finder = DistanceFind(rospy.get_param('target/color/lower_bound'),
                                      rospy.get_param('target/color/upper_bound'))
-    else: # 'histogram'
+        coarse_find = coarse_finder.find_roi_contours
+    elif coarse_alg == 'histogram':
         coarse_finder = HistogramFind()
+        coarse_find = coarse_finder.find_roi_contours
+    else:
+        coarse_find = None
 
     detailed_finder = PolarityFind(rospy.get_param('target/center_black'),
                                    rospy.get_param('target/black_rings'))
-    #mission = ObjectFindMission('balldrop_mission', coarse_finder.find_roi_contours,
-    mission = ObjectFindMission('balldrop_mission', None,
+    mission = ObjectFindMission('balldrop_mission', coarse_find,
                                 detailed_finder.find_target)
     mission.execute()
