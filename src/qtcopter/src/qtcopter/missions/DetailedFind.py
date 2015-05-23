@@ -70,10 +70,15 @@ class DetailedFind(MissionState):
         If the target is lost, return 'failed'.
         If the optimal position is reached, return 'succeeded'.
         '''
+        debug_draw_rects = []
+        debug_draw_circles = []
+
+        return_value = 'failed'
         for cont in userdata.rois:
             rect = cv2.boundingRect(cont)
             # Cut out ROI
             min, max = (rect[0], rect[1]), (rect[0]+rect[2], rect[1]+rect[3])
+            debug_draw_rects.append((min, max))
             rospy.loginfo('Searching for target in ROI '
                           '({0:d}, {1:d}), ({2:d}, {3:d}).'.format(min[0],
                                                                    min[1],
@@ -86,23 +91,25 @@ class DetailedFind(MissionState):
             if center is not None:
                 # Add offset to uncropped image
                 center = (int(center[0] + min[0]), int(center[1] + min[1]))
-
-            def draw_center_location():
-                rospy.logdebug('Publishing center location of target.')
-                cv2.rectangle(image, min, max, (255, 0, 0))
-                if center is not None:
-                    cv2.circle(image, center, int(size/2.0),
-                               (0, 255, 0), -1)
-                return image
-            self.debug_publish(draw_center_location)
-
-            if center is not None:
+                debug_draw_circles.append((center, size))
                 rospy.logdebug('Publishing offset to target.')
                 self.publish_offset(center, size)
                 # TODO: when mission finished:
-                #  return 'succeeded'
-                return None
+                # return_value = 'succeeded'
+                return_value = None
+                break
+
+        def draw_center_location():
+            rospy.logdebug('Publishing center location of target.')
+            for min, max in debug_draw_rects:
+                cv2.rectangle(image, min, max, (255, 0, 0))
+            for center, size in debug_draw_circles:
+                cv2.circle(image, center, int(size/2.0),
+                           (0, 255, 0), -1)
+            return image
+        self.debug_publish(draw_center_location)
+
 
         rospy.loginfo('Lost target, try finding it again.')
-        return 'failed'
+        return return_value
 
