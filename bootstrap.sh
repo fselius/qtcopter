@@ -21,6 +21,9 @@ if [[ -z "${ROS_DISTRO}" ]]; then
   rosdep update
   echo "source /opt/ros/indigo/setup.bash" >> ~/.bash_profile
   source ~/.bash_profile
+else
+  # List additionally required ROS packages
+  sudo apt-get install -y ros-indigo-desktop-full ros-indigo-hector-quadrotor-description ros-indigo-usb-cam
 fi
 
 # Set up ROS workspace.

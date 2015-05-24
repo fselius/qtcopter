@@ -7,13 +7,23 @@ This module provides camera functionality:
 '''
 
 CAMERAS = {}
-CAMERAS['CMLN-13S2C-CS'] = {
-    'full_name': 'PTGrey Chameleon CMLN-13S2C-CS',
+CAMERAS['CMLN-13S2C-CS 6mm'] = {
+    # competition camera and lens
+    'full_name': 'PTGrey Chameleon CMLN-13S2C-CS 6mm',
     'max_resolution': (1296, 964), # (1280, 960) ?
     'max_resolution_fps': 18,
     'resolutions': [(1296, 964), (1280, 960)],
     'width_dest_ratio': 0.81/1280, # in 1280 pixels we saw 81cm from 1m distance
     'height_dest_ratio': 0.81/1280,
+}
+CAMERAS['CMLN-13S2C-CS 9mm'] = {
+    # competition camera, too zoomy lens
+    'full_name': 'PTGrey Chameleon CMLN-13S2C-CS 9mm',
+    'max_resolution': (1296, 964), # (1280, 960) ?
+    'max_resolution_fps': 18,
+    'resolutions': [(1296, 964), (1280, 960)],
+    'width_dest_ratio': 0.53/1280, # in 1280 pixels we saw 81cm from 1m distance
+    'height_dest_ratio': 0.53/1280,
 }
 CAMERAS['iphone 6 plus'] = {
     'full_name': 'iPhone 6 Plus',
@@ -23,18 +33,39 @@ CAMERAS['iphone 6 plus'] = {
     'width_dest_ratio': 1.13/3264, # in 3264 pixels we saw 113cm from 1m distance
     'height_dest_ratio': 1.13/3264, # =~ 0.85/2/2448
 }
-DEFAULT_CAMERA = 'iphone 6 plus'
+CAMERAS['iphone 6 plus rect'] = {
+    'full_name': 'iPhone 6 Plus Rectangle mode',
+    'max_resolution': (2448, 2448), # (1280, 960) ?
+    'max_resolution_fps': 60,
+    'resolutions': [(2448, 2448)],
+    'width_dest_ratio': 1.13/3264, # in 3264 pixels we saw 113cm from 1m distance
+    'height_dest_ratio': 1.13/3264, # =~ 0.85/2/2448
+}
+CAMERAS['lenovo e330'] = {
+    'full_name': 'Lenovo e330',
+    'max_resolution': (640, 480),
+    'max_resolution_fps': 30,
+    'resolutions': [(640, 480)],
+    'width_dest_ratio': 0.875/640,
+    'height_dest_ratio': 0.875/640,
+}
+#DEFAULT_CAMERA = 'lenovo e330'
+#DEFAULT_CAMERA = 'iphone 6 plus'
+#DEFAULT_CAMERA = 'CMLN-13S2C-CS 6mm'
+DEFAULT_CAMERA = 'CMLN-13S2C-CS 9mm'
 
 class Camera(object):
     ''' A class representing a camera. This can be either the current camera,
         or a camera which we took pictures with earlier.
         Currently, this is simply dummy info. Doesn't do actualy camera setting schange '''
-    def __init__(self, cam=DEFAULT_CAMERA, dummy=False):
+    def __init__(self, cam=DEFAULT_CAMERA, dummy=True):
         self.info = CAMERAS[cam]
         self.dummy = dummy
         self.resolution = self.info['max_resolution']
-        self.sensor_rect = self.resolution
-        #self.size_ratio = (1, 1) # width, height
+        self.sensor_rect = (0, 0) + self.resolution
+    @staticmethod
+    def get_cameras():
+        return CAMERAS.keys()
     def get_resolution(self):
         " Get camera resolution "
         return self.resolution
@@ -75,10 +106,10 @@ class Camera(object):
         # finally, calculate ratio
         return x*self.info['width_dest_ratio']*distance, y*self.info['height_dest_ratio']*distance
     def get_camera_offset(self, ground_offset, distance, camera_corner_offset=False):
-        ''' get_camera offset - Get camera offset in pixels from ground offset
+        ''' get_camera_offset - Get camera offset in pixels from ground offset
                                 in meters from center.
                 ground_offset - ground offset from center [meters]
-                distance      - distance to ground
+                distance      - distance to ground [meters]
                 camera_corner_offset - whether camera offset is from the top left corner
         '''
         x, y = ground_offset
@@ -87,4 +118,6 @@ class Camera(object):
             x, y = x+self.info['max_resolution'][0]/2, y+self.info['max_resolution'][1]/2
         return x, y
 
-camera = Camera()
+# create instance of default, live camera
+default_camera = Camera(dummy=False)
+

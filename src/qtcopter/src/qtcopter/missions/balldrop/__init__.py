@@ -1,4 +1,1 @@
-from qtcopter.missions.balldrop import CoarseFind, DetailedFind
-
-CoarseFind = CoarseFind.CoarseFind
-DetailedFind = DetailedFind.DetailedFind
+from .polarity_find import PolarityFind

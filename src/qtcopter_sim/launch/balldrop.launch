@@ -1,7 +1,9 @@
 <launch>
+  <arg name="camera_pointing_downwards" value="true" />
   <arg name="camera" default="true" />
   <include file="$(find qtcopter_sim)/launch/common/sim.launch">
     <arg name="camera" value="$(arg camera)" />
+    <arg name="camera_pointing_downwards" value="$(arg camera_pointing_downwards)" />
   </include>
-  <node pkg="qtcopter" type="balldrop" name="balldrop_mission" output="screen" />
+  <include file="$(find qtcopter)/launch/balldrop.launch" />
 </launch>
