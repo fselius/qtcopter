@@ -214,24 +214,41 @@ def hist_rect(channel, x=0, y=0, width=None, height=None, max_value=255):
     return hist.reshape(hist.size) # return a flat array
 
 
-def iter_rect(x, y, width, height, rect_size, overlap):
-    " generate rectangle coordinates "
-    # TODO: Currently we don't handle cases when right\bottom edge isn't
-    # at round boundary (i.e. not multiple of rect_width-overlap_x)
-    # we should probably also yield last row/column end the end to check
-    # these edges.
-    for row in range(x, width-rect_size[0]+1, rect_size[0]-overlap[0]):
-        for col in range(y, height-rect_size[1]+1, rect_size[1]-overlap[1]):
-            yield row, col, rect_size[0], rect_size[1]
+def iter_rect(x, y, width, height, rect_size, overlap, cover=True):
+    """ generate rectangle coordinates inside rectangle
+        x, y, width, height
+            - dimensions of enclosing rectangle
+        rect_size (width, height)
+            - size of small innner rectangles
+        overlap (width, height)
+            - how much should small rectangles overlap
+        cover
+            - whether to cover whole area. whether to add additional inner
+            rectangles in case they don't cover the whole outer rectangle
+            (with the specified overlap)
+    """
+    cols = range(x, x+width -rect_size[0]+1, rect_size[0]-overlap[0])
+    rows = range(y, y+height-rect_size[1]+1, rect_size[1]-overlap[1])
+    if cover:
+        # if width isn't a multiple of rect_size[0], we didn't check last column
+        if width%(rect_size[0]-overlap[0]):
+            cols.append(x+width-rect_size[0])
+        # same for height and last row
+        if height%(rect_size[1]-overlap[1]):
+            rows.append(y+height-rect_size[1])
+
+    for row in rows:
+        for col in cols:
+            yield col, row, rect_size[0], rect_size[1]
 
 @profile
-def hist_iter_rects(channel, rect_size, overlap, hist_filter=is_black_white):
+def hist_iter_rects(img, rect_size, overlap, hist_filter=is_black_white):
     " iterate over good rectangles "
     # TODO: perhaps rewrite with filter()
-    it_rects = iter_rect(0, 0, channel.shape[1], channel.shape[0],
+    it_rects = iter_rect(0, 0, img.shape[1], img.shape[0],
             rect_size, overlap)
     for x, y, width, height in it_rects:
-        hist = hist_rect(channel, x, y, width, height, max_value=255)
+        hist = hist_rect(img, x, y, width, height, max_value=255)
         if hist_filter(hist):
             yield x, y
 

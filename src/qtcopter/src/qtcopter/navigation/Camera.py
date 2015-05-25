@@ -58,11 +58,14 @@ class Camera(object):
     ''' A class representing a camera. This can be either the current camera,
         or a camera which we took pictures with earlier.
         Currently, this is simply dummy info. Doesn't do actualy camera setting schange '''
-    def __init__(self, cam=DEFAULT_CAMERA, dummy=True):
-        self.info = CAMERAS[cam]
+    def __init__(self, name=DEFAULT_CAMERA, dummy=True):
+        self.info = CAMERAS[name]
+        self.name = name
         self.dummy = dummy
         self.resolution = self.info['max_resolution']
         self.sensor_rect = (0, 0) + self.resolution
+    def __repr__(self):
+        return '<Camera name=%r>' % (self.name,)
     @staticmethod
     def get_cameras():
         return CAMERAS.keys()
