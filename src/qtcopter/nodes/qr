@@ -4,5 +4,24 @@
 ROS node for QR scan mission.
 """
 
+from qtcopter.missions import DistanceFind
+from qtcopter.missions.balldrop.hist_find import HistogramFind
+from qtcopter.missions.qr.qrcode_scan import QRCodeScanner
+from qtcopter.missions import DetailFindMission
+import rospy
+
 if __name__ == '__main__':
-    print('TODO')
+    coarse_alg = rospy.get_param('target/coarse_algorithm')
+    if coarse_alg == 'distance':
+        coarse_finder = DistanceFind(rospy.get_param('target/color/lower_bound'),
+                                     rospy.get_param('target/color/upper_bound'))
+        coarse_find = coarse_finder.find_roi_contours
+    elif coarse_alg == 'histogram':
+        coarse_finder = HistogramFind()
+        coarse_find = coarse_finder.find_roi_contours
+    else:
+        coarse_find = None
+    scanner = QRCodeScanner()
+    mission = DetailFindMission('qr_mission', coarse_find,
+                                scanner.find_qrs)
+    mission.execute()

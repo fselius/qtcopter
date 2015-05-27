@@ -20,30 +20,36 @@ import time
 CAM = 0
 WINDOW = 'bah'
 
-def find_qrcodes(img, width, height):
-    " scan a cv2 image with zbar "
-    # TODO: how to get width & height from img?
-    
-    # convert to zbar image
-    # TODO: how to directly convert cv2 image to zbar image?
-    img_rgb = img #cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
-    PIL_img = Image.fromarray(img_rgb).convert('L')
-    #img_gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
-    zbar_img = zbar.Image(width, height, 'Y800', PIL_img.tostring())
+import cv2
+import numpy as np
 
-    # create scanner object
-    scanner = zbar.ImageScanner()
-    # TODO: how to only scan QRCodes?
-    scanner.parse_config('enable')
+class QRCodeScanner(object):
+    " zbar QRCode scanner "
+    def __init__(self):
+        # TODO: optimize!
+        # http://zbar.sourceforge.net/iphone/sdkdoc/optimizing.html
+        self._scanner = zbar.ImageScanner()
+        # TODO: how to only scan QRCodes?
+        self._scanner.parse_config('enable')
 
-    # scan
-    results = scanner.scan(zbar_img)
-    # results holds number of results..
-    
-    return list(zbar_img)
+    def find_qrs(self, image):
+        # convert to zbar image
+        zbar_img = self.cv2_BGR_to_zbar_img(image)
+        # scan
+        results = self._scanner.scan(zbar_img)
+        # results holds number of results. zbar_img the actualy results.
+        return zbar_img
 
-def is_grayscale(img):
-    return len(img.shape) == 2
+    @staticmethod
+    def cv2_BGR_to_zbar_img(image):
+        # TODO: Looks like this function currently doesn't work. FIXME!
+        width, height = image.shape[:2]
+        # TODO: how to directly convert cv2 image to zbar image?
+        image = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
+        #img_rgb = image #cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
+        PIL_img = Image.fromarray(image).convert('L')
+        zbar_img = zbar.Image(width, height, 'Y800', PIL_img.tostring())
+        return zbar_img
 
 def loop(camid=CAM):
     # open camera
@@ -62,6 +68,7 @@ def loop(camid=CAM):
     cam_time = 1
     zbar_time = 1
     # loop..
+    scanner = QRCodeScanner()
     while True:
         all_time = time.time()-t
         print 'all: %.3fs % 3.0ffps cam: %.3fs %4.0ffps zbar: %.3fs %4.0ffps' %\
@@ -75,7 +82,8 @@ def loop(camid=CAM):
             cam.release()
             sys.exit(-2)
         t2 = time.time()
-        results = find_qrcodes(img, width, height)
+        results = scanner.find_qrs(img)
+        #results = find_qrcodes(img, width, height)
         zbar_time = time.time()-t2
         for res in results:
             print '%s %s: %r' % (time.ctime(), res.type, res.data)

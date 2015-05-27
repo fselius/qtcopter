@@ -1,0 +1,18 @@
+<launch>
+  <node pkg="qtcopter" type="qr" name="qr_mission" output="screen">
+  </node>
+  <rosparam ns="target">
+    <!-- approximate A4 target size -->
+    size: 60.0
+    color:
+      lower_bound: [200, 200, 200]
+      upper_bound: [255, 255, 255]
+    <!-- alg: distance, histogram, None otherwise (coarse returns whole picture) -->
+    coarse_algorithm: histogram
+  </rosparam>
+  <rosparam ns="camera">
+    pointing_downwards: False
+    image_width: 640
+    image_height: 480
+  </rosparam>
+</launch>

@@ -49,6 +49,10 @@ class PolarityFind:
                              hierarchy[i][2] >= 0 and hierarchy[i][3] < 0]
 
         # DEBUG OUTPUT
+        # TODO/FIXME:
+        # this draws the contours on image, which is a partial view of the
+        # original image. Perhaps this doesn't work correclty? or maybe it's
+        # too sllow?
         cv2.drawContours(image, contours, -1, (0, 0, 255))
 
         # Go up and check polarity
