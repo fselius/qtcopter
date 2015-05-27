@@ -4,6 +4,7 @@ from sensor_msgs.msg import Image, Range
 import rospy
 import smach
 import threading
+import tf
 
 
 class MissionState(smach.State):
@@ -21,11 +22,11 @@ class MissionState(smach.State):
         rospy.logdebug('%s initialized.'.format(self))
 
     def publish_delta(self, camera_frame, translation, theta):
-        rospy.logdebug('Publish delta: x {0}, y {1}, z {2}, theta {3}'.format(translation[0],
+        rospy.loginfo('Publish delta: x {0}, y {1}, z {2}, theta {3}'.format(translation[0],
            translation[1],
            translation[2],
            theta))
-        rotation = tf.transformations.quaternion_from_euler((0, 0, theta))
+        rotation = tf.transformations.quaternion_from_euler(0, 0, theta)
         self._delta_pub.sendTransform(translation,
                                       rotation,
                                       rospy.Time.now(),

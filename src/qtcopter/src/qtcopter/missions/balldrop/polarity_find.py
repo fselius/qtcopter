@@ -10,10 +10,12 @@ Usage:
 import cv2
 import numpy as np
 
+
 class PolarityFind:
-    def __init__(self, center_black, number_of_rings):
+    def __init__(self, center_black, number_of_rings, debug=True):
         self._center_black = center_black
         self._number_of_rings = number_of_rings
+        self._debug = debug
 
     def find_contours(self, image):
         image = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
@@ -27,6 +29,7 @@ class PolarityFind:
         if threshold is None or threshold.size == 0:
             return None, None
 
+        # FIXME: the outer rectangle of the ROI is detected as contour.. what do do about that?
         contours, hierarchy = cv2.findContours(threshold, cv2.RETR_TREE,
                                                cv2.CHAIN_APPROX_SIMPLE)
 
@@ -45,15 +48,16 @@ class PolarityFind:
             return (None, None)
 
         # Find leaf contours with parent and at least 50 points.
-        leaf_contours_idx = [i for i, c in enumerate(contours) if len(c) >= 50 and
+        leaf_contours_idx = [i for i, c in enumerate(contours) if len(c) >= 4 and
                              hierarchy[i][2] >= 0 and hierarchy[i][3] < 0]
 
         # DEBUG OUTPUT
-        # TODO/FIXME:
-        # this draws the contours on image, which is a partial view of the
-        # original image. Perhaps this doesn't work correclty? or maybe it's
-        # too sllow?
-        cv2.drawContours(image, contours, -1, (0, 0, 255))
+        if self._debug:
+            # TODO/FIXME:
+            # this draws the contours on image, which is a partial view of the
+            # original image. Perhaps this doesn't work correclty? or maybe it's
+            # too slow?
+            cv2.drawContours(image, contours, -1, (0, 0, 255))
 
         # Go up and check polarity
         for i in leaf_contours_idx:

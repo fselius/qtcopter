@@ -82,6 +82,11 @@ class DetailedFind(MissionState):
             # Find center of target
             center, size = self._find_object_center(cropped_image)
             if center is not None:
+                rospy.loginfo('Found target in ROI '
+                              '({0:d}, {1:d}), ({2:d}, {3:d}).'.format(min[0],
+                                                                       min[1],
+                                                                       max[0],
+                                                                       max[1]))
                 # Add offset to uncropped image
                 center = (int(center[0] + min[0]), int(center[1] + min[1]))
                 debug_draw_circles.append((center, size))
@@ -101,7 +106,8 @@ class DetailedFind(MissionState):
                            (0, 255, 0), -1)
             return image
 
-        self.debug_publish(draw_center_location)
+        self.publish_debug_image(draw_center_location)
 
-        rospy.loginfo('Lost target, try finding it again.')
+        if return_value is 'failed':
+            rospy.loginfo('Lost target, try finding it again.')
         return return_value

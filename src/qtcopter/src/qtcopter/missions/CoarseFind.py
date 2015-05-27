@@ -57,15 +57,6 @@ class CoarseFind(MissionState):
         # Get distance in millimetres
         offset = self._camera.get_ground_offset(offset_px, height)
 
-        # Send a default angle
-        angle = tf.transformations.quaternion_from_euler(0, 0, 0)
-
-        # Camera points to the ground
-        # -> distance to object is z coordinate
-        x, y = offset
-        z = 0 # stay at same height
-
-
         # if target near edge, move to edge
         is_edge_close = lambda value, size: 1.0*value/size<0.1 or 1.0*(size-value)/size<0.1
         close_left  = is_edge_close(rect[0], image_width)
@@ -81,12 +72,22 @@ class CoarseFind(MissionState):
         if abs(offset_px[0]/image_width) < 0.2 and abs(offset_px[1]/image_height) < 0.2:
             return 'succeeded'
 
+        if rospy.get_param('camera/pointing_downwards'):
+            # Camera points to the ground
+            # -> distance to object is z coordinate
+            x, y = offset
+            z = 0
+            camera_frame = 'downward_cam_optical_frame'
+        else:
+            # Camera is facing forward
+            # -> distance to object is y coordinate
+            x, z = offset
+            y = 0
+            camera_frame = 'cam_optical_frame'
+
         # finally, fly to center of mass
-        self._pub.sendTransform((x, y, z),
-                        angle,
-                        rospy.Time.now(),
-                        'camera',
-                        'target')
+        self.publish_delta(camera_frame, (x, y, z), 0)
+
         # continue with coarse find until we are above ROI
         return None
 
@@ -112,4 +113,3 @@ class CoarseFind(MissionState):
 
         userdata.rois = rois
         return self.publish_offset(height, rois)
-

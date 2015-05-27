@@ -1,0 +1,42 @@
+#!/usr/bin/env python2
+
+"""
+Listen to offset to requested waypoint as published by qtcopter nodes
+and output geometry_msgs/Twist to /cmd_vel.
+"""
+
+from geometry_msgs.msg import Twist
+import argparse
+import rospy
+import tf
+
+if __name__ == '__main__':
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument('-r', '--rate', type=float, default=30)
+
+    args = parser.parse_args(rospy.myargv()[1:])
+
+    rospy.init_node('sim_navigation')
+
+    t = tf.TransformListener()
+    pub = rospy.Publisher('/cmd_vel', Twist, queue_size=1)
+
+    rate = rospy.Rate(args.rate)
+    while not rospy.is_shutdown():
+        twist = Twist()
+
+        if t.frameExists('waypoint'):
+            try:
+                translation, rotation = t.lookupTransform('base_link', 'waypoint', rospy.Time(0))
+                rospy.loginfo('Publish {0}, {1}, {2}'.format(translation[0],
+                                                             translation[1],
+                                                             translation[2]))
+                twist.linear.x = translation[0]
+                twist.linear.y = translation[1]
+                twist.linear.z = translation[2]
+            except tf.Exception as e:
+                rospy.logerr(e)
+                twist = Twist()
+
+        pub.publish(twist)
+        rate.sleep()
