@@ -1,28 +1,32 @@
 <launch>
-  <arg name="camera" default="true" />
-  <arg name="camera_pointing_downwards" />
-  <arg name="image_path" unless="$(arg camera)" />
+    <arg name="camera" default="true" />
+    <arg name="usb_camera" default="true" />
+    <arg name="camera_pointing_downwards" />
+    <arg name="image_path" unless="$(arg camera)" />
 
-  <!-- Height of quadcopter -->
-  <node pkg="qtcopter_sim" type="rangepub" name="publish_height" args="/height 0.5 -r 50" if="$(arg camera)" />
-  <node pkg="qtcopter_sim" type="rangepub" name="publish_height" args="/height 3.0 -r 50" unless="$(arg camera)" />
+    <!-- Height of quadcopter -->
+    <node pkg="qtcopter_sim" type="rangepub" name="publish_height" args="/height 0.5 -r 50" if="$(arg camera)" />
+    <node pkg="qtcopter_sim" type="rangepub" name="publish_height" args="/height 3.0 -r 50" unless="$(arg camera)" />
 
-  <!-- Camera -->
-  <node pkg="qtcopter_sim" type="imagepub" name="publish_image" args="/image $(arg image_path) -r 50" unless="$(arg camera)" />
+    <!-- Simulation camera -->
+    <node pkg="qtcopter_sim" type="imagepub" name="publish_image" args="/image $(arg image_path) -r 50" unless="$(arg camera)" />
 
-  <!-- usb cam -->
-  <!--node pkg="usb_cam" type="usb_cam_node" name="publish_image" if="$(arg camera)">
-    <remap from="publish_image/image_raw" to="image" />
-  </node-->
+    <!-- Real camera -->
+    <group if="$(arg camera)">
+        <!-- usb cam -->
+        <node pkg="usb_cam" type="usb_cam_node" name="publish_image" if="$(arg usb_camera)">
+            <remap from="publish_image/image_raw" to="image" />
+        </node>
 
-  <!-- ptgrey -->
-  <remap from="/camera/image_color" to="/image" />
-  <include file="$(find qtcopter)/launch/ptgrey.launch" />
+        <!-- ptgrey -->
+        <remap from="/camera/image_color" to="/image" unless="$(arg usb_camera)" />
+        <include file="$(find qtcopter)/launch/ptgrey.launch" unless="$(arg usb_camera)" />
+    </group>
 
-  <!-- Transform to center of quadcopter -->
-  <node pkg="tf" type="static_transform_publisher" name="camera_to_quadcopter" args="0 0 0.2 1.57075 0 0 camera quadcopter 100" />
-  <node pkg="tf" type="static_transform_publisher" name="quadcopter_to_baselink" args="0 0 0 0 0 0 quadcopter base_link 100" />
+    <!-- Transform to center of quadcopter -->
+    <node pkg="tf" type="static_transform_publisher" name="camera_to_quadcopter" args="0 0 0.2 1.57075 0 0 camera quadcopter 100" />
+    <node pkg="tf" type="static_transform_publisher" name="quadcopter_to_baselink" args="0 0 0 0 0 0 quadcopter base_link 100" />
 
-  <param name="robot_description" unless="$(arg camera_pointing_downwards)" command="$(find xacro)/xacro.py $(find hector_quadrotor_description)/urdf/quadrotor_with_cam.urdf.xacro" />
-  <param name="robot_description" if="$(arg camera_pointing_downwards)" command="$(find xacro)/xacro.py $(find hector_quadrotor_description)/urdf/quadrotor_downward_cam.urdf.xacro" />
+    <param name="robot_description" unless="$(arg camera_pointing_downwards)" command="$(find xacro)/xacro.py $(find hector_quadrotor_description)/urdf/quadrotor_with_cam.urdf.xacro" />
+    <param name="robot_description" if="$(arg camera_pointing_downwards)" command="$(find xacro)/xacro.py $(find hector_quadrotor_description)/urdf/quadrotor_downward_cam.urdf.xacro" />
 </launch>
