@@ -48,6 +48,9 @@ class PolarityFind:
             return (None, None)
 
         # Find leaf contours with parent and at least 50 points.
+        # TODO: This doesn't work correctly. Too many false negatives..
+        # Also, looks like this isn't a terrible performance issue to go over
+        # all the contours.
         leaf_contours_idx = [i for i, c in enumerate(contours) if len(c) >= 4 and
                              hierarchy[i][2] >= 0 and hierarchy[i][3] < 0]
 
@@ -57,10 +60,13 @@ class PolarityFind:
             # this draws the contours on image, which is a partial view of the
             # original image. Perhaps this doesn't work correclty? or maybe it's
             # too slow?
-            cv2.drawContours(image, contours, -1, (0, 0, 255))
+            cv2.drawContours(image, contours, -1, (0, 0, 255), 3)
+            cv2.drawContours(image, [contours[i] for i in leaf_contours_idx], -1, (0, 255, 0), 2)
 
         # Go up and check polarity
-        for i in leaf_contours_idx:
+        # FIXME: Until leaf_contours_idx is fixed, go over all the contours.
+        #for i in leaf_contours_idx:
+        for i in range(len(contours)):
             polarity = self._center_black
             inner_counter = 0
             idx = i

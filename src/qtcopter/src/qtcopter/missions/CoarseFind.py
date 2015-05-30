@@ -6,18 +6,7 @@ import tf
 
 from . import MissionState
 from qtcopter.navigation.Camera import default_camera
-from .balldrop.utils import center_of_mass
-
-def rect_contour(rect):
-    " create contour from rectangle "
-    # rect = (x, y, width, height)
-    pts = [
-        [[rect[0], rect[1]]],
-        [[rect[0]+rect[2]-1, rect[1]]],
-        [[rect[0]+rect[2]-1, rect[1]+rect[3]-1]],
-        [[rect[0], rect[1]+rect[3]-1]]
-    ]
-    return np.array(pts, dtype=np.int32)
+from .utils import rect_contour
 
 class CoarseFind(MissionState):
     def __init__(self, delta_pub, debug_pub, find_roi_func, camera=default_camera):

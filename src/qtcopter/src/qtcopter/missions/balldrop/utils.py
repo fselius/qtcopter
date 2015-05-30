@@ -3,11 +3,8 @@
 import math
 import numpy as np
 
-#import cv
 import cv2
 
-#from numpy.linalg import norm as norm
-from scipy.ndimage.measurements import center_of_mass 
 from qtcopter.navigation.Camera import default_camera
 
 TARGET_A4_RADIUS = 0.21/2 # A4 paper meters

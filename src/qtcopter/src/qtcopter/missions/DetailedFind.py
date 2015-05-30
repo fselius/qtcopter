@@ -2,7 +2,7 @@ from . import MissionState
 import rospy
 import cv2
 from ..navigation.Camera import default_camera
-
+from .utils import rect_contour
 
 class DetailedFind(MissionState):
     def __init__(self, delta_pub, debug_pub, find_object_center_func):
@@ -10,6 +10,7 @@ class DetailedFind(MissionState):
                               delta_pub,
                               debug_pub,
                               input_keys=['rois'],
+                              output_keys=['rois'],
                               outcomes=['succeeded',
                                         'aborted',
                                         'failed'])
@@ -65,30 +66,36 @@ class DetailedFind(MissionState):
         '''
         debug_draw_rects = []
         debug_draw_circles = []
+        new_rois = None
 
         return_value = 'failed'
         for cont in userdata.rois:
             rect = cv2.boundingRect(cont)
             # Cut out ROI
-            min, max = (rect[0], rect[1]), (rect[0]+rect[2], rect[1]+rect[3])
-            debug_draw_rects.append((min, max))
+            #min, max = (rect[0], rect[1]), (rect[0]+rect[2], rect[1]+rect[3])
+            min_ = (max(rect[0]-rect[2]/10, 0), max(rect[1]-rect[3]/10, 0))
+            max_ = (rect[0]+rect[2]+rect[2]/10, rect[1]+rect[3]+rect[3]/10)
+
+            debug_draw_rects.append((min_, max_))
             rospy.loginfo('Searching for target in ROI '
-                          '({0:d}, {1:d}), ({2:d}, {3:d}).'.format(min[0],
-                                                                   min[1],
-                                                                   max[0],
-                                                                   max[1]))
-            cropped_image = image[min[1]:max[1], min[0]:max[0]]
+                          '({0:d}, {1:d}), ({2:d}, {3:d}).'.format(min_[0],
+                                                                   min_[1],
+                                                                   max_[0],
+                                                                   max_[1]))
+            cropped_image = image[min_[1]:max_[1], min_[0]:max_[0]]
 
             # Find center of target
             center, size = self._find_object_center(cropped_image)
             if center is not None:
                 rospy.loginfo('Found target in ROI '
-                              '({0:d}, {1:d}), ({2:d}, {3:d}).'.format(min[0],
-                                                                       min[1],
-                                                                       max[0],
-                                                                       max[1]))
+                              '({0:d}, {1:d}), ({2:d}, {3:d}).'.format(min_[0],
+                                                                       min_[1],
+                                                                       max_[0],
+                                                                       max_[1]))
                 # Add offset to uncropped image
-                center = (int(center[0] + min[0]), int(center[1] + min[1]))
+                center = (int(center[0] + min_[0]), int(center[1] + min_[1]))
+                # move ROI to center (to improve subsequent searches)
+                new_rois = [rect_contour((center[0]-size*3./2, center[1]-size*3./2, size*3., size*3.))]
                 debug_draw_circles.append((center, size))
                 rospy.logdebug('Publishing offset to target.')
                 self.publish_offset(center, size)
@@ -96,6 +103,9 @@ class DetailedFind(MissionState):
                 # return_value = 'succeeded'
                 return_value = None
                 break
+
+        if new_rois is not None:
+            userdata.rois = new_rois
 
         def draw_center_location():
             rospy.logdebug('Publishing center location of target.')
