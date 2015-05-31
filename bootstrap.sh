@@ -23,7 +23,7 @@ if [[ -z "${ROS_DISTRO}" ]]; then
   source ~/.bash_profile
 else
   # List additionally required ROS packages
-  sudo apt-get install -y ros-indigo-desktop-full ros-indigo-hector-quadrotor-description ros-indigo-usb-cam
+  sudo apt-get install -y ros-indigo-desktop-full ros-indigo-hector-quadrotor-description ros-indigo-usb-cam ros-indigo-camera-info-manager-py
 fi
 
 # Set up ROS workspace.

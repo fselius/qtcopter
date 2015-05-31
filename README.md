@@ -67,6 +67,14 @@ $ roslaunch qtcopter_sim balldrop.launch
 $ rosrun smach_viewer smach_viewer.py
 ```
 
+## For Deploying
+
+Required ROS packages:
+
+    ros-indigo-camera-info-manager-py
+    ros-indigo-smach-ros
+    ros-indigo-pointgrey-camera-driver
+
 ## For Users
 
 Obtain a VM image from the developers and start it in [VirtualBox][virtualbox]. Username and password are both `vagrant`. Each time you want to update the Qtcopter code, run `update_qtcopter.sh` from the Desktop.
