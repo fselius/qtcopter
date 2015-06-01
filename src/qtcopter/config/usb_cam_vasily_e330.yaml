@@ -1,0 +1,20 @@
+image_width: 640
+image_height: 480
+camera_name: usb_cam_vasily_e330
+camera_matrix:
+  rows: 3
+  cols: 3
+  data: [727.1868379793863, 0, 315.7683874062525, 0, 730.1459836265959, 253.1603091297931, 0, 0, 1]
+distortion_model: plumb_bob
+distortion_coefficients:
+  rows: 1
+  cols: 5
+  data: [-0.06902695439303791, 0.05159669828437424, -0.0003168454067368605, -0.001593932120969115, 0]
+rectification_matrix:
+  rows: 3
+  cols: 3
+  data: [1, 0, 0, 0, 1, 0, 0, 0, 1]
+projection_matrix:
+  rows: 3
+  cols: 4
+  data: [717.531005859375, 0, 314.4888457079505, 0, 0, 723.53857421875, 252.7250785422366, 0, 0, 0, 1, 0]

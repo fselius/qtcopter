@@ -42,16 +42,22 @@ class PolarityFind:
         '''
         Return the center of the target in pixel coordinates as tuple (x, y).
         '''
-
+        self.resize = 500
+        #ratio = 1.0*self.resize/max(image.shape[:2])
+        #if ratio < 1:
+        #    image = cv2.resize(image, (0,0), fx=ratio, fy=ratio)
+ 
         contours, hierarchy = self.find_contours(image)
         if contours is None or hierarchy is None:
             return (None, None)
+
+        contours_idx = [i for i, c in enumerate(contours) if len(c) >= 40]
 
         # Find leaf contours with parent and at least 50 points.
         # TODO: This doesn't work correctly. Too many false negatives..
         # Also, looks like this isn't a terrible performance issue to go over
         # all the contours.
-        leaf_contours_idx = [i for i, c in enumerate(contours) if len(c) >= 4 and
+        leaf_contours_idx = [i for i in contours_idx if len(contours[i]) >= 4 and
                              hierarchy[i][2] >= 0 and hierarchy[i][3] < 0]
 
         # DEBUG OUTPUT
@@ -60,8 +66,9 @@ class PolarityFind:
             # this draws the contours on image, which is a partial view of the
             # original image. Perhaps this doesn't work correclty? or maybe it's
             # too slow?
-            cv2.drawContours(image, contours, -1, (0, 0, 255), 3)
-            cv2.drawContours(image, [contours[i] for i in leaf_contours_idx], -1, (0, 255, 0), 2)
+            cv2.drawContours(image, contours, -1, (0, 0, 255), 5)
+            cv2.drawContours(image, [contours[i] for i in leaf_contours_idx], -1, (0, 255, 0), 4)
+            cv2.drawContours(image, [contours[i] for i in contours_idx], -1, (255, 0, 0), 3)
 
         # Go up and check polarity
         # FIXME: Until leaf_contours_idx is fixed, go over all the contours.
@@ -87,7 +94,10 @@ class PolarityFind:
                     moments = cv2.moments(contours[idx])
                     x = int(moments['m10']/moments['m00'])
                     y = int(moments['m01']/moments['m00'])
-                    return ((x, y), np.sqrt(4*cv2.contourArea(contours[idx])/np.pi))
+                    r = np.sqrt(4*cv2.contourArea(contours[idx])/np.pi)
+                    r = 5./2 * r # circle / inner white circle radius ratio
+                    return ((x, y), r)
+                    #return ((x/ratio, y/ratio), np.sqrt(4*cv2.contourArea(contours[idx])/ratio**2/np.pi))
                 idx = hierarchy[idx][2]
 
         return (None, None)

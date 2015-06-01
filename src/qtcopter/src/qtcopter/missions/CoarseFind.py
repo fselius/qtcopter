@@ -40,11 +40,8 @@ class CoarseFind(MissionState):
         rect = cv2.boundingRect(roi)
         center = (rect[0]+rect[2]/2.0, rect[1]+rect[3]/2.0)
 
-        # Get offset in pixels
-        offset_px = (center[0]-image_width/2.0, center[1]-image_height/2.0)
-
         # Get distance in millimetres
-        offset = self._camera.get_ground_offset(offset_px, height)
+        offset = self._camera.get_ground_offset(center, height)
 
         # if target near edge, move to edge
         is_edge_close = lambda value, size: 1.0*value/size<0.1 or 1.0*(size-value)/size<0.1
@@ -98,7 +95,7 @@ class CoarseFind(MissionState):
         if rois is None or len(rois)==0:
             return None
 
-        self.publish_debug_image(draw_roi)
+        #self.publish_debug_image(draw_roi)
 
         userdata.rois = rois
         return self.publish_offset(height, rois)

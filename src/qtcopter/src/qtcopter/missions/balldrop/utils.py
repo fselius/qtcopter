@@ -22,7 +22,7 @@ def contour_size_ok(contour, distance, camera=default_camera):
     # top_left, top_right, bottom_left, bottom_right
     corners = [(x, y), (x+width, y), (x, y+height), (x+width, y+height)] 
     # convert to ground offsets in meters
-    corners = map(lambda _: camera.get_ground_offset(_, distance, True), corners)
+    corners = map(lambda _: camera.get_ground_offset(_, distance), corners)
 
     area = cv2.norm(corners[0], corners[1]) * cv2.norm(corners[0], corners[2])
     return area > 0.8 * TARGET_CIRCLE_AREA

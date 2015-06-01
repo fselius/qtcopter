@@ -6,9 +6,7 @@
     black_rings: 3
     <!-- target diameter in millimeters -->
     <!-- approximate A4 target size -->
-    <!-- size: 150.0 -->
-    <!-- TODO: currently we find size of inner white circle, so size is different. -->
-    size: 60.0
+    size: 150.0
     <!-- actual target size -->
     <!-- size: 1500.0 -->
     color:

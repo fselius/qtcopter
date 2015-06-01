@@ -1,0 +1,20 @@
+image_width: 1296
+image_height: 964
+camera_name: ptgrey_15031847_6mm
+camera_matrix:
+  rows: 3
+  cols: 3
+  data: [1637.393272357992, 0, 599.7289883119882, 0, 1640.345478680075, 492.559565104441, 0, 0, 1]
+distortion_model: plumb_bob
+distortion_coefficients:
+  rows: 1
+  cols: 5
+  data: [-0.2290884883484807, 0.2813014555024865, -0.0005526236981738512, -0.004668492260052386, 0]
+rectification_matrix:
+  rows: 3
+  cols: 3
+  data: [1, 0, 0, 0, 1, 0, 0, 0, 1]
+projection_matrix:
+  rows: 3
+  cols: 4
+  data: [1584.373291015625, 0, 592.9544344964379, 0, 0, 1608.346557617188, 492.1424857043348, 0, 0, 0, 1, 0]

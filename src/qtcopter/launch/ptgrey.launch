@@ -1,7 +1,7 @@
 <launch>
   <!-- default 9mm chameleon-->
   <arg name="lense" default="9mm" />
-  <arg name="camera_serial" default="15031851" />
+  <arg name="camera_serial" default="$(arg camera_serial)" />
 
   <group ns="camera">
     <node pkg="nodelet" type="nodelet" name="camera_nodelet_manager" args="manager" />

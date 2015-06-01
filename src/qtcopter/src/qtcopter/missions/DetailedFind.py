@@ -95,7 +95,8 @@ class DetailedFind(MissionState):
                 # Add offset to uncropped image
                 center = (int(center[0] + min_[0]), int(center[1] + min_[1]))
                 # move ROI to center (to improve subsequent searches)
-                new_rois = [rect_contour((center[0]-size*3./2, center[1]-size*3./2, size*3., size*3.))]
+                roi_size = 1.5*size
+                new_rois = [rect_contour((center[0]-roi_size/2, center[1]-roi_size/2, roi_size, roi_size))]
                 debug_draw_circles.append((center, size))
                 rospy.logdebug('Publishing offset to target.')
                 self.publish_offset(center, size)
@@ -109,10 +110,14 @@ class DetailedFind(MissionState):
 
         def draw_center_location():
             rospy.logdebug('Publishing center location of target.')
-            for min, max in debug_draw_rects:
-                cv2.rectangle(image, min, max, (255, 0, 0))
+            for min_, max_ in debug_draw_rects:
+                cv2.rectangle(image, min_, max_, (255, 0, 0))
             for center, size in debug_draw_circles:
+                # plot circle
                 cv2.circle(image, center, int(size/2.0),
+                           (0, 255, 0), 4)
+                # plot middle
+                cv2.circle(image, center, 7,
                            (0, 255, 0), -1)
             return image
 
