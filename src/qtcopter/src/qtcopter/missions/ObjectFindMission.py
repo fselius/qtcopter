@@ -1,5 +1,6 @@
 from qtcopter.missions import CoarseFind, DetailedFind
 from sensor_msgs.msg import Image
+from qtcopter.msg import controller_msg
 import rospy
 import smach
 import smach_ros
@@ -18,14 +19,15 @@ class ObjectFindMission(smach.State):
                                                'mission aborted'])
         self.debug_pub = rospy.Publisher('/debug_image', Image, queue_size=1)
         self.delta_pub = tf.TransformBroadcaster()
+        self.pid_input_pub = rospy.Publisher('/pid_input', controller_msg, queue_size=1)
         with self.sm:
             smach.StateMachine.add('CoarseFind',
-                                   CoarseFind(self.delta_pub, self.debug_pub,
+                                   CoarseFind(self.delta_pub, self.pid_input_pub, self.debug_pub,
                                               coarse_find_func),
                                    transitions={'succeeded': 'DetailedFind',
                                                 'aborted': 'mission aborted'})
             smach.StateMachine.add('DetailedFind',
-                                   DetailedFind(self.delta_pub, self.debug_pub,
+                                   DetailedFind(self.delta_pub, self.pid_input_pub, self.debug_pub,
                                                 detailed_find_func),
                                    transitions={'failed': 'CoarseFind',
                                                 'succeeded': 'mission successful',
