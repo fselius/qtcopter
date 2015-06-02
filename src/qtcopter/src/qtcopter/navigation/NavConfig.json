@@ -15,9 +15,10 @@
     },
     "params":{
       "HumanOverrideChannel":7,
-      "HumanOverrideDefault":1000,
-      "HumanOverrideThreshold":50,
-      "HumanOverrideElapsedTimeAllowed":2
+      "HumanOverrideDefault":1800,
+      "HumanOverrideThreshold":100,
+      "HumanOverrideElapsedTimeAllowed":2,
+      "PublishRate":25
     },
     "modes":[
       "RTL", "POSHOLD", "LAND", "OF_LOITER", "STABILIZE", "AUTO", "GUIDED",
