@@ -14,7 +14,8 @@
       <!-- When unspecified, the driver will use the default framerate as given by the
            camera itself. Use this parameter to override that value for cameras capable of
            other framerates. -->
-      <!-- <param name="frame_rate" value="15" /> -->
+      <!-- maximum framerate -->
+      <param name="frame_rate" value="18" />
 
       <!-- disable automatic exposure -->
       <param name="auto_exposure" value="false" />
@@ -27,7 +28,8 @@
            This is a fine value for a person holding a camera in hands, to make
            the picture look sharp. However, on a quadcopter results may vary..
       -->
-      <param name="shutter" value="0.010" />
+      <!-- the following setting don't work. we get 30ms shutter anyway -->
+      <param name="shutter" value="0.005" />
       <!-- gain is what we change from area to another area -->
       <!-- TODO: How do we experimentally choose the value? -->
         <!-- medium lighted room -->>

@@ -19,9 +19,12 @@ class PolarityFind:
 
     def find_contours(self, image):
         image = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
-        # TODO: Should we add more blur? Looked like polarity find worked
-        # better with unfocused pictures.
-        image = cv2.medianBlur(image, 13)
+        # blur kernel about 20 for 1000x1000px, 10 for 500x500, 5 for 250x250
+        blurk = max(image.shape)/50
+        if ~blurk&1:
+            blurk += 1
+        image = cv2.medianBlur(image, blurk)
+
         # TODO: Fix the threshold. It worked better for us with 100, but we need to test.
         #_, threshold = cv2.threshold(image, 180, 1, cv2.THRESH_BINARY)
         _, threshold = cv2.threshold(image, 100, 1, cv2.THRESH_BINARY)
@@ -42,11 +45,13 @@ class PolarityFind:
         '''
         Return the center of the target in pixel coordinates as tuple (x, y).
         '''
-        self.resize = 500
-        #ratio = 1.0*self.resize/max(image.shape[:2])
-        #if ratio < 1:
-        #    image = cv2.resize(image, (0,0), fx=ratio, fy=ratio)
- 
+        # resize input image, assuming target takes at least 1/2 of the frame.
+        self.resize = 400
+        orig_shape = image.shape[:2]
+        while min(image.shape[:2]) > self.resize:
+            image = cv2.pyrDown(image)
+        ratio = 1.*image.shape[0]/orig_shape[0]
+
         contours, hierarchy = self.find_contours(image)
         if contours is None or hierarchy is None:
             return (None, None)
@@ -96,23 +101,29 @@ class PolarityFind:
                     y = int(moments['m01']/moments['m00'])
                     r = np.sqrt(4*cv2.contourArea(contours[idx])/np.pi)
                     r = 5./2 * r # circle / inner white circle radius ratio
-                    return ((x, y), r)
-                    #return ((x/ratio, y/ratio), np.sqrt(4*cv2.contourArea(contours[idx])/ratio**2/np.pi))
+                    #return ((x, y), r)
+                    return ((x/ratio, y/ratio), r/ratio)
                 idx = hierarchy[idx][2]
 
         return (None, None)
+
+def show_img(img):
+    cv2.imshow('model', img)
+    cv2.waitKey(0)
+    cv2.destroyAllWindows()
 
 if __name__ == '__main__':
     import sys
     image = cv2.imread(sys.argv[1])
 
-    center, size = PolarityFind(True, 3).find_target(image)
+    import cProfile
+    finder = PolarityFind(True, 3, debug=False)
+    center, size = finder.find_target(image)
+    #cProfile.run("center, size = finder.find_target(image)")
     print 'center:', center
     if center is not None:
-        cv2.circle(image, center, 5, (0, 0, 255), 5)
-        cv2.imshow('model', image)
-        cv2.waitKey(0)
-        cv2.destroyAllWindows()
+        cv2.circle(image, tuple(map(int, center)), 5, (0, 255, 255), -1)
+        show_img(image)
     else:
         print 'could not find target'
         
