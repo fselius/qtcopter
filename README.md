@@ -75,6 +75,12 @@ Required ROS packages:
     ros-indigo-smach-ros
     ros-indigo-pointgrey-camera-driver
 
+The last package has to be built from source:
+
+    $ echo "deb http://packages.ros.org/ros/ubuntu trusty main" >> /etc/apt/sources.list.d/ros-latest.list
+    $ sudo apt-get install apt-build
+    $ sudo apt-build install ros-indigo-pointgrey-camera-driver
+
 ## For Users
 
 Obtain a VM image from the developers and start it in [VirtualBox][virtualbox]. Username and password are both `vagrant`. Each time you want to update the Qtcopter code, run `update_qtcopter.sh` from the Desktop.
