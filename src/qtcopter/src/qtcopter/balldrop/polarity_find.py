@@ -126,4 +126,3 @@ if __name__ == '__main__':
         show_img(image)
     else:
         print 'could not find target'
-        

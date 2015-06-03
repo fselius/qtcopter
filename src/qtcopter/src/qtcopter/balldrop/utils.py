@@ -5,8 +5,6 @@ import numpy as np
 
 import cv2
 
-from qtcopter.navigation.Camera import default_camera
-
 TARGET_A4_RADIUS = 0.21/2 # A4 paper meters
 TARGET_MISSION_RADIUS = 1 # meters
 
@@ -15,7 +13,7 @@ TARGET_CIRCLE_AREA = math.pi * TARGET_RADIUS**2 # circle area
 TARGET_SQUARE_AREA = (TARGET_RADIUS*2)**2 #
 
 
-def contour_size_ok(contour, distance, camera=default_camera):
+def contour_size_ok(contour, distance, camera):
     ''' contour_size_ok - determine if contour size is ok for height '''
     # find enclosing rectangle
     x, y, width, height = cv2.boundingRect(contour)
@@ -27,7 +25,7 @@ def contour_size_ok(contour, distance, camera=default_camera):
     area = cv2.norm(corners[0], corners[1]) * cv2.norm(corners[0], corners[2])
     return area > 0.8 * TARGET_CIRCLE_AREA
 
-def filter_contours(contours, distance, camera=default_camera):
+def filter_contours(contours, distance, camera):
     ''' filter out bad contours  '''
     # filter by size of enclosing rectangle. we only make sure it's big enough.
     contours = filter(lambda x: contour_size_ok(x, distance, camera), contours)

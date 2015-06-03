@@ -50,21 +50,21 @@ $ roslaunch qtcopter <mission>.launch
 
 Or use `roslaunch qtcopter_sim <mission>.launch`.
 
-### State Machine Introspection
+### State Machine
 
 ![State machine for the balldrop mission](images/balldrop_statemachine.png)
 
-Unfortunately, the SMACH (State MACHine) package's GUI tools are broken in ROS Indigo, but you can apply a patch to fix it:
+Write the state machine to a Graphviz file:
+
+```python
+with open('sm.dot', 'w') as file:
+    sm.write_dot(file)
+```
+
+Convert it to an image:
 
 ```
-$ sudo patch -d /opt/ros/indigo -p1 < ./smach_viewer.patch
-```
-
-To run the state machine viewer (example for the balldrop mission):
-
-```
-$ roslaunch qtcopter_sim balldrop.launch
-$ rosrun smach_viewer smach_viewer.py
+$ dot -Tpng sm.dot -o sm.png
 ```
 
 ## For Deploying
@@ -72,7 +72,6 @@ $ rosrun smach_viewer smach_viewer.py
 Required ROS packages:
 
     ros-indigo-camera-info-manager-py
-    ros-indigo-smach-ros
     ros-indigo-pointgrey-camera-driver
 
 The last package has to be built from source:

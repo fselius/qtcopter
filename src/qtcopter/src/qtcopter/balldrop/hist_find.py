@@ -71,13 +71,14 @@ class HistogramFind(object):
     def __init__(self, resize=500, channel=HLS_LIGHT_CHANNEL):
         self.resize = resize
         self.channel = channel
+
     def find_roi(self, image, height, camera):
         " Find ROI enclosing rectangle "
         # resize
         ratio = 1.0*self.resize/max(image.shape[:2])
         if ratio < 1:
             image = cv2.resize(image, (0,0), fx=ratio, fy=ratio)
-        
+
         # find size of rectangle
         rect_size = map(lambda _: int(ceil(_*ratio)), self.get_rect_size(height, camera))
         rect_overlap = map(lambda _: int(ceil(RATIO_RECT_TO_OVERLAP*_)), rect_size)
@@ -89,7 +90,7 @@ class HistogramFind(object):
         if ratio < 1:
             roi = (roi[0][0]/ratio, roi[0][1]/ratio), (roi[1][0]/ratio, roi[1][1]/ratio)
         return roi
-        
+
     def find_roi_mask(self, image, height, camera):
         " Find ROI mask "
         # resize
@@ -116,7 +117,7 @@ class HistogramFind(object):
         #contours = filter_contours(contours, height, camera)
         # sort by area
         return sorted(contours, reverse=True, key=lambda c: cv2.contourArea(c))
-        
+
     @staticmethod
     def get_rect_size(height, camera):
         " Get rectangle size for histogram "
@@ -353,7 +354,7 @@ if __name__ == '__main__':
             print 'Could not use camera %r' % (args.camera,)
             print 'Available cameras:', Camera.get_cameras()
             sys.exit(1)
-        
+
         what = 'find_roi_contours'
         #what = 'find_roi'
         if what == 'find_roi_contours':
@@ -380,7 +381,7 @@ if __name__ == '__main__':
             corner_min, corner_max = tuple(map(int_ceil, corner_min)), tuple(map(int_ceil, corner_max))
             print 'rect:', corner_min, corner_max
             cv2.rectangle(img, corner_min, corner_max, (255, 0,0), 5)
-        
+
         if args.verbose > 0:
             print '%fs for %s' % (time.time()-t, img_path)
         if args.show:

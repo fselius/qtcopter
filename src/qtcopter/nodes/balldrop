@@ -1,25 +1,49 @@
 #!/usr/bin/env python2
 
-from qtcopter.missions import DistanceFind
-from qtcopter.missions.balldrop.hist_find import HistogramFind
-from qtcopter.missions.balldrop import PolarityFind
-from qtcopter.missions import ObjectFindMission
+from qtcopter import DistanceFind
+from qtcopter import RosStateMachine as StateMachine
+from qtcopter import FlyToMission, FlyToBase
+from qtcopter import SpiralSearch, CenterAbove
+from qtcopter.balldrop import DescendToTarget, DropObject
+from qtcopter.balldrop import HistogramFind, PolarityFind
 import rospy
 
 if __name__ == '__main__':
-    coarse_alg = rospy.get_param('target/coarse_algorithm')
-    if coarse_alg == 'distance':
-        coarse_finder = DistanceFind(rospy.get_param('target/color/lower_bound'),
-                                     rospy.get_param('target/color/upper_bound'))
-        coarse_find = coarse_finder.find_roi_contours
-    elif coarse_alg == 'histogram':
-        coarse_finder = HistogramFind()
-        coarse_find = coarse_finder.find_roi_contours
-    else:
-        coarse_find = None
+    coarse_alg = rospy.get_param('target/coarse_algorithm', 'histogram')
 
-    detailed_finder = PolarityFind(rospy.get_param('target/center_black'),
-                                   rospy.get_param('target/black_rings'))
-    mission = ObjectFindMission('balldrop_mission', coarse_find,
-                                detailed_finder.find_target)
-    mission.execute()
+    if coarse_alg == 'histogram':
+        coarse_finder = HistogramFind()
+    else:
+        coarse_finder = DistanceFind(rospy.get_param('target/color/lower_bound', [200, 200, 200]),
+                                     rospy.get_param('target/color/upper_bound', [255, 255, 255]))
+
+    detailed_finder = PolarityFind(rospy.get_param('target/center_black', True),
+                                   rospy.get_param('target/black_rings', 3))
+
+    #mission_position = rospy.get_param('mission_site/offset')
+    mission_position = None
+
+    sm = StateMachine(states={
+                          'Fly to mission site': FlyToMission(mission_position),
+                          'Spiral search for target': SpiralSearch(coarse_finder.find_roi_contours),
+                          'Center above target': CenterAbove(coarse_finder.find_roi_contours),
+                          'Descend to target': DescendToTarget(detailed_finder.find_target),
+                          'Drop object on target': DropObject(),
+                          'Fly back to base': FlyToBase(),
+                      },
+                      transitions={
+                          'on way to mission site': 'Fly to mission site',
+                          'mission site reached': 'Spiral search for target',
+                          'continue spiraling': 'Spiral search for target',
+                          'found target': 'Center above target',
+                          'target lost': 'Spiral search for target',
+                          'centered above target': 'Descend to target',
+                          'drop height reached': 'Drop object on target',
+                          'object dropped': 'Fly back to base',
+                          'on way to base': 'Fly back to base',
+                      },
+                      start='Fly to mission site',
+                      outcomes='base reached')
+    rospy.init_node('balldrop_mission')
+    sm.execute()
+    rospy.spin()
