@@ -6,8 +6,9 @@ from qtcopter.msg import controller_msg, uav_msg
 from PIDModule import PIDController
 import Configuration
 
-
-config = Configuration.Configuration('/home/efishtain/PycharmProjects/qtcopter/src/qtcopter/src/qtcopter/navigation/PidConfig.json')
+#TODO: set this path relativly to any working directory (odroid, any dev machine)
+config = Configuration.Configuration('/home/odroid/catkin_ws/src/qtcopter/src/qtcopter/src/qtcopter/navigation/PidConfig.json')
+#config = Configuration.Configuration('/home/noam/catkin_ws/src/qtcopter/src/qtcopter/src/qtcopter/navigation/PidConfig.json')
 
 class PIDManager:
     def __init__(self, dt, minLimit, maxLimit):

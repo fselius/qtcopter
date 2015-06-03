@@ -4,7 +4,7 @@
 import time
 import rospy
 from mavros.msg import OverrideRCIn
-from mavros.srv import CommandBool
+from mavros.srv import CommandBool, CommandLong
 from mavros.srv import SetMode
 from rospy.core import rospydebug
 from threading import Thread
@@ -13,10 +13,8 @@ from mavros.msg import State
 from Configuration import Configuration
 from geometry_msgs.msg import PoseWithCovarianceStamped
 from mavros.msg import RCIn
-from mavros.srv import CommandInt
 from std_msgs.msg import Float64
 from qtcopter.msg import controller_msg
-import os
 
 config = Configuration("NavConfig.json")
 #FlightMode class : encapsulates all mode related operations of the drone
@@ -83,10 +81,16 @@ class Navigator:
     #ConstantRatePublish : publishing the outputs of pid_controller to rc_override channels
     #at 25hz rate.
     #runs as a separate thread so the set_mode service won't be occupied.
-    def __ConstantRatePublish(self):
+    def __ConstantRatePublish(self, arg):
+        print "got here.........." + self.__currentMode.upper()
         rate = rospy.Rate(self.__navigatorParams["PublishRate"])
-        while(self.__currentMode == 'PID_ACTIVE' or self.__currentMode == 'PID_ACTIVE_HOLD_ALT'):
-            msg = rospy.wait_for_message('/pid/controller_command',controller_msg)
+        #while self.__currentMode.upper() == 'PID_ACTIVE' or self.__currentMode.upper() == 'PID_ACTIVE_HOLD_ALT':
+        while True:
+            try:
+                msg = rospy.wait_for_message('/pid/controller_command',controller_msg)
+            except:
+                print "caught"
+            print("publishing : {0} {1} {2} {3}".format(msg.x,msg.y,msg.z,msg.t))
             self.PublishRCMessage(msg.x, msg.y, msg.z, msg.t)
             rate.sleep()
         return 1
@@ -102,6 +106,7 @@ class Navigator:
             print("Service did not process request: " + str(ex))
             return False
 
+        self.__currentMode = mode.custom_mode
         var = mode.custom_mode.upper()
         if var == 'ALT_HOLD':
             srv(base_mode=0, custom_mode='ALT_HOLD')
@@ -114,16 +119,19 @@ class Navigator:
             self.__isArmed = False
         elif var == 'PID_ACTIVE':
             srv(base_mode=0, custom_mode='STABILIZE')
-            thread = Thread(target = self.__ConstantRatePublish, args = None)
+            thread = Thread(target = self.__ConstantRatePublish, args = (int(mode.base_mode), ))
             thread.start()
         elif var == 'PID_ACTIVE_HOLD_ALT':
             srv(base_mode=0, custom_mode='ALT_HOLD')
-            thread = Thread(target = self.__ConstantRatePublish, args = None)
+            thread = Thread(target = self.__ConstantRatePublish, args = (int(mode.base_mode), ))
             thread.start()
         elif var == 'PID_RESET':
             #TODO: reset pid logic here
+            print "to be implemented"
+        elif var == 'CIRCLE':
+            cmd = CommandLong()
+            cmd.command = 17
 
-        self.__currentMode = mode.custom_mode
         print "Navigator is changing flight mode"
         print "mode: " + self.__currentMode.upper()
         return True
