@@ -1,18 +1,19 @@
 <launch>
-  <arg name="camera_pointing_downwards" value="true" />
-  <arg name="camera" default="true" />
-  <arg name="usb_camera" default="true" />
+  <arg name="use_ptgrey" default="false" />
+  <arg name="camera" unless="$(arg use_ptgrey)" />
+  <arg name="lense" if="$(arg use_ptgrey)" />
+  <arg name="camera_serial" if="$(arg use_ptgrey)" />
 
-  <!-- these are for ptgrey -->
-  <arg name="camera_serial" default="0" />
-  <arg name="lense" default="0" />
-
-  <include file="$(find qtcopter_sim)/launch/common/sim.launch">
-    <arg name="camera" value="$(arg camera)" />
-    <arg name="camera_serial" value="$(arg camera_serial)" />
-    <arg name="lense" value="$(arg lense)" />
-    <arg name="usb_camera" value="$(arg usb_camera)" />
-    <arg name="camera_pointing_downwards" value="$(arg camera_pointing_downwards)" />
+  <include file="$(find qtcopter)/launch/balldrop_mission.launch">
   </include>
-  <include file="$(find qtcopter)/launch/balldrop.launch" />
+
+  <include file="$(find qtcopter_sim)/launch/camera.launch">
+    <arg name="use_ptgrey" value="$(arg use_ptgrey)" />
+    <arg name="camera" value="$(arg camera)" unless="$(arg use_ptgrey)" />
+    <arg name="lense" value="$(arg lense)" if="$(arg use_ptgrey)" />
+    <arg name="camera_serial" value="$(arg camera_serial)" if="$(arg use_ptgrey)" />
+  </include>
+
+  <include file="$(find qtcopter_sim)/launch/navigation.launch">
+  </include>
 </launch>

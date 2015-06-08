@@ -1,0 +1,20 @@
+image_width: 640
+image_height: 480
+camera_name: fwalch
+camera_matrix:
+  rows: 3
+  cols: 3
+  data: [654.7829756976683, 0, 311.6253466799087, 0, 654.9772610210687, 253.1525881885037, 0, 0, 1]
+distortion_model: plumb_bob
+distortion_coefficients:
+  rows: 1
+  cols: 5
+  data: [-0.08529751981119502, 0.1391026146317073, 0.001684761989294706, 0.002440508058772069, 0]
+rectification_matrix:
+  rows: 3
+  cols: 3
+  data: [1, 0, 0, 0, 1, 0, 0, 0, 1]
+projection_matrix:
+  rows: 3
+  cols: 4
+  data: [646.422119140625, 0, 312.5551533379621, 0, 0, 647.5634765625, 253.2539632925182, 0, 0, 0, 1, 0]

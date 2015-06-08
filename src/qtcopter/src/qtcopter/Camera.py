@@ -5,34 +5,18 @@ This module provides camera functionality:
 - Getting camera stats
 - Pixel/distance conversion
 '''
-import rospy
-import camera_info_manager
 import numpy as np
 
-class Camera(object):
+
+class Camera:
     ''' A class representing a camera. This can be either the current camera,
         or a camera which we took pictures with earlier.
         Currently, this is simply dummy info. Doesn't do actual camera settings change '''
 
-    def __init__(self, camera_info_path=None, camera_info_url=None, cname=''):
-        if camera_info_path is not None:
-            camera_info_url = 'file://' + camera_info_path
-        if camera_info_url is None:
-            camera_info_url = rospy.get_param("/camera/camera_nodelet/camera_info_url")
-        self._camera_info_url = camera_info_url
-
-        if camera_info_url.upper().startswith('FILE://'):
-            self.info = camera_info_manager.loadCalibrationFile(camera_info_url[7:], cname)
-        else:
-            raise NotImplementedError("only urls of file:// type are supported for now")
-            # if we want another url type, rip from here:
-            # /opt/ros/indigo/lib/python2.7/dist-packages/camera_info_manager/camera_info_manager.py:
-            # CameraInfoManager._loadCalibration
-        # make sure it was successful
-        if self.info.K[0] == 0.0:
-            raise RuntimeError("Could not load camera info. Bad url? (url=%s)" % (self._camera_info_url,))
-
-        self.K = np.array(self.info.K).reshape(3,3)
+    def __init__(self, camera_name, camera_info):
+        self.camera_name = camera_name
+        self.info = camera_info
+        self.K = np.array(self.info.K).reshape(3, 3)
         self.K_inv = np.linalg.inv(self.K)
 
         # TODO: Get actual resolution. It may be different than the default one.
@@ -40,7 +24,7 @@ class Camera(object):
         self.width = self.info.width
 
     def __repr__(self):
-        return '<Camera yaml=%r>' % (self._camera_info_path,)
+        return '<Camera name={0}>'.format(self.camera_name)
 
     def get_ground_offset(self, camera_offset, distance, camera_corner_offset=True):
         ''' get_ground_offset - Get ground offset in meters from camera offset
@@ -71,3 +55,25 @@ class Camera(object):
         if not camera_corner_offset:
             x, y = x-self.width/2., y-self.height/2.
         return x, y
+
+    @classmethod
+    def from_ros(cls):
+        import rospy
+        import camera_info_manager
+
+        rospy.loginfo('Initializing camera from ROS.')
+        camera_info_url = rospy.get_param('camera/info_url')
+        camera_name = rospy.get_param('camera/name')
+        if camera_info_url.upper().startswith('FILE://'):
+            camera_info = camera_info_manager.loadCalibrationFile(camera_info_url[7:], camera_name)
+        else:
+            raise NotImplementedError("only urls of file:// type are supported for now")
+            # if we want another url type, rip from here:
+            # /opt/ros/indigo/lib/python2.7/dist-packages/camera_info_manager/camera_info_manager.py:
+            # CameraInfoManager._loadCalibration
+
+        # make sure it was successful
+        if camera_info.K[0] == 0.0:
+            raise RuntimeError("Could not load camera info. Bad url? (url={0})".format(camera_info_url))
+
+        return cls(camera_name, camera_info)

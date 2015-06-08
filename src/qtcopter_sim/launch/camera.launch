@@ -1,0 +1,19 @@
+<launch>
+  <arg name="use_ptgrey" default="false" />
+  <arg name="camera" unless="$(arg use_ptgrey)" />
+  <arg name="lense" if="$(arg use_ptgrey)" />
+  <arg name="camera_serial" if="$(arg use_ptgrey)" />
+
+  <include file="$(find qtcopter)/launch/ptgrey.launch" if="$(arg use_ptgrey)">
+    <arg name="lense" value="$(arg lense)" />
+    <arg name="camera_serial" value="$(arg camera_serial)" />
+  </include>
+
+  <group unless="$(arg use_ptgrey)">
+    <node pkg="usb_cam" type="usb_cam_node" name="camera" unless="$(arg use_ptgrey)">
+        <remap from="camera/image_raw" to="/image" />
+    </node>
+    <param name="camera/info_url" value="file://$(find qtcopter_sim)/config/$(arg camera).yaml" />
+    <param name="camera/name" value="$(arg camera)" />
+  </group>
+</launch>

@@ -1,23 +1,15 @@
 <launch>
-  <node pkg="qtcopter" type="balldrop" name="balldrop_mission" output="screen">
-  </node>
-  <rosparam ns="target">
-    center_black: True
-    black_rings: 3
-    <!-- target diameter in millimeters -->
-    <!-- approximate A4 target size -->
-    size: 150.0
-    <!-- actual target size -->
-    <!-- size: 1500.0 -->
-    color:
-      lower_bound: [200, 200, 200]
-      upper_bound: [255, 255, 255]
-    <!-- alg: distance, histogram, None otherwise (coarse returns whole picture) -->
-    coarse_algorithm: histogram
-  </rosparam>
-  <rosparam ns="camera">
-    pointing_downwards: True
-    image_width: 640
-    image_height: 480
-  </rosparam>
+  <arg name="lense" default="6mm" />
+  <arg name="camera_serial" default="TODO" />
+
+  <include file="$(find qtcopter)/launch/balldrop_mission.launch">
+  </include>
+
+  <include file="$(find qtcopter)/launch/ptgrey.launch">
+    <arg name="lense" value="$(arg lense)" />
+    <arg name="camera_serial" value="$(arg camera_serial)" />
+  </include>
+
+  <include file="$(find qtcopter)/launch/navigation.launch">
+  </include>
 </launch>

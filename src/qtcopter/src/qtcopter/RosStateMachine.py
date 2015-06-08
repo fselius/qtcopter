@@ -1,4 +1,4 @@
-from . import Userdata, StateMachine
+from . import Userdata, StateMachine, Camera
 from cv_bridge import CvBridge, CvBridgeError
 from sensor_msgs.msg import Range, Image
 from qtcopter.msg import controller_msg
@@ -8,7 +8,7 @@ import tf
 
 
 class RosStateMachine(StateMachine):
-    def __init__(self, states, transitions, start, outcomes):
+    def __init__(self, states, transitions, start, outcomes, camera=None):
         StateMachine.__init__(self, states, transitions, start, outcomes)
         self.__last_output = Userdata()
         self.__bridge = CvBridge()
@@ -19,6 +19,11 @@ class RosStateMachine(StateMachine):
         self.__pid_input_pub = rospy.Publisher('/pid_input', controller_msg,
                                                queue_size=1)
 
+        if camera is None:
+            self.__camera = Camera.from_ros()
+        else:
+            self.__camera = camera
+
     def execute(self):
         self.__height_sub = Subscriber('height', Range)
         self.__image_sub = Subscriber('image', Image)
@@ -27,6 +32,7 @@ class RosStateMachine(StateMachine):
                                                   queue_size=1,
                                                   slop=0.05)
         self.__sync.registerCallback(self.__callback)
+
         rospy.spin()
 
     def __callback(self, range_msg, image_msg):
@@ -47,6 +53,7 @@ class RosStateMachine(StateMachine):
         u.publish_debug = self.publish_debug
         u.publish_delta = self.publish_delta
         u.height_msg = range_msg
+        u.camera = self.__camera
         try:
             u.image = self.__bridge.imgmsg_to_cv2(image_msg,
                                                   desired_encoding='bgr8')
