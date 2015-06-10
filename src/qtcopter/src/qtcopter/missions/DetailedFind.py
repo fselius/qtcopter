@@ -1,7 +1,7 @@
 from . import MissionState
 import rospy
 import cv2
-from ..navigation.Camera import default_camera
+from ..navigation.Camera import default_camera as camera
 from .utils import rect_contour
 
 class DetailedFind(MissionState):
@@ -20,22 +20,19 @@ class DetailedFind(MissionState):
         # Get size of target in millimeters
         real_size = rospy.get_param('target/size')/1000.0  # meters!
 
-        image_width = rospy.get_param('camera/image_width')
-        image_height = rospy.get_param('camera/image_height')
-
         # Get offset in pixels
-        offset = [center[0]-image_width/2.0, center[1]-image_height/2.0]
+        offset = [center[0]-camera.width/2.0, center[1]-camera.height/2.0]
         # Get distance in millimetres
 
         # find size at 1meter
         p1 = (center[0]-estimated_size/2.0, center[1])
         p2 = (center[0]+estimated_size/2.0, center[1])
-        p1 = default_camera.get_ground_offset(p1, 1)
-        p2 = default_camera.get_ground_offset(p2, 1)
+        p1 = camera.get_ground_offset(p1, 1)
+        p2 = camera.get_ground_offset(p2, 1)
         size_at_1m = cv2.norm(p1, p2)
         distance = real_size/size_at_1m  # estimated :)
 
-        offset = default_camera.get_ground_offset(center, distance)
+        offset = camera.get_ground_offset(center, distance)
         # TODO: f from camera calibration
         #f = 28
         #distance = f*real_size/estimated_size

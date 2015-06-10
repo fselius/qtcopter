@@ -18,6 +18,7 @@ MACS = {
     # TODO: add more MAC addresses here
     '36:e6:6a:0e:97:b1': 'odroid XU',
     '00:1e:06:61:7a:39': 'odroid XU3',
+    '7c:dd:90:73:6a:1f': 'odroid on drone',
 }
 
 if os.geteuid() != 0:

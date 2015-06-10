@@ -34,6 +34,9 @@ class Camera(object):
 
         self.K = np.array(self.info.K).reshape(3,3)
         self.K_inv = np.linalg.inv(self.K)
+        # TODO: Get actual resolution. It may be different than the default one.
+        self.height = self.info.height
+        self.width = self.info.width
     def __repr__(self):
         return '<Camera yaml=%r>' % (self._camera_info_path,)
     def get_ground_offset(self, camera_offset, distance, camera_corner_offset=True):
