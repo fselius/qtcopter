@@ -18,8 +18,8 @@ class DetailedFind(MissionState):
         self._find_object_center = find_object_center_func
 
     def publish_offset(self, center, estimated_size):
-        # Get size of target in millimeters
-        real_size = rospy.get_param('target/size')/1000.0  # meters!
+        # Get size of target in meters
+        real_size = rospy.get_param('target/size')
 
         # Get offset in pixels
         offset = [center[0]-camera.width/2.0, center[1]-camera.height/2.0]

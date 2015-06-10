@@ -8,14 +8,23 @@ from qtcopter.balldrop import DescendToTarget, DropObject
 from qtcopter.balldrop import HistogramFind, PolarityFind
 import rospy
 
+
+class NoFind:
+    def find_roi_rects(self, image, **kwargs):
+        return [(0, 0, image.shape[1], image.shape[0])]
+
 if __name__ == '__main__':
     coarse_alg = rospy.get_param('target/coarse_algorithm', 'histogram')
+    target_diameter = rospy.get_param('target/size')
 
     if coarse_alg == 'histogram':
-        coarse_finder = HistogramFind()
+        coarse_finder = HistogramFind(diameter=target_diameter)
+    elif coarse_alg == 'distance':
+        coarse_finder = DistanceFind(rospy.get_param('target/distance/lower_bound', [200, 200, 200]),
+                                     rospy.get_param('target/distance/upper_bound', [255, 255, 255]),
+                                     kernel_size=rospy.get_param('target/distance/kernel_size', 30))
     else:
-        coarse_finder = DistanceFind(rospy.get_param('target/color/lower_bound', [200, 200, 200]),
-                                     rospy.get_param('target/color/upper_bound', [255, 255, 255]))
+        coarse_finder = NoFind()
 
     detailed_finder = PolarityFind(rospy.get_param('target/center_black', True),
                                    rospy.get_param('target/black_rings', 3))
@@ -25,8 +34,8 @@ if __name__ == '__main__':
 
     sm = StateMachine(states={
                           'Fly to mission site': FlyToMission(mission_position),
-                          'Spiral search for target': SpiralSearch(coarse_finder.find_roi_contours),
-                          'Center above target': CenterAbove(coarse_finder.find_roi_contours),
+                          'Spiral search for target': SpiralSearch(coarse_finder.find_roi_rects),
+                          'Center above target': CenterAbove(coarse_finder.find_roi_rects),
                           'Descend to target': DescendToTarget(detailed_finder.find_target),
                           'Drop object on target': DropObject(),
                           'Fly back to base': FlyToBase(),

@@ -3,7 +3,7 @@ import cv2
 
 
 class DistanceFind:
-    def __init__(self, lower, upper, min_factor=0.95, max_factor=1.05, debug=False):
+    def __init__(self, lower, upper, min_factor=0.95, max_factor=1.05, kernel_size=30, debug=False):
         assert(len(lower) == 3)
         assert(len(upper) == 3)
         self.lower = np.array(lower, dtype='uint8')
@@ -11,6 +11,7 @@ class DistanceFind:
         self.min_factor = min_factor
         self.max_factor = max_factor
         self.debug = False
+        self.__kernel = np.ones((kernel_size, kernel_size), np.uint8)
 
     def find_roi_mask(self, image):
         # Apply a small blur to reduce noise.
@@ -23,14 +24,20 @@ class DistanceFind:
         # the edges of the balldrop circle target. Meanwhile, we can return the
         # enclosing rectangle (TODO)
         roi_mask = self.find_roi_mask(image)
+        roi_mask = cv2.morphologyEx(roi_mask, cv2.MORPH_CLOSE, self.__kernel)
         contours, hier = cv2.findContours(roi_mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
-        self.debug_output(image, roi_mask)
-        return contours
+        # self.debug_output(image, roi_mask)
+        return sorted(contours, reverse=True, key=lambda c: cv2.contourArea(c))
+
+    def find_roi_rects(self, image, **kwargs):
+        contours = self.find_roi_contours(image)
+
+        return [cv2.boundingRect(c) for c in contours]
 
     def find_roi(self, image, **kw):
         roi_mask = self.find_roi_mask(image)
         y_indices, x_indices = np.where(roi_mask)
-        self.debug_output(image, roi_mask)
+        # self.debug_output(image, roi_mask)
 
         if x_indices.size == 0 or y_indices.size == 0:
             return None

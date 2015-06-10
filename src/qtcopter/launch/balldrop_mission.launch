@@ -4,17 +4,25 @@
 
   <!-- Mission configuration -->
   <rosparam ns="target">
+    <!-- Center of target is black? -->
     center_black: True
+
+    <!-- Number of black rings on target -->
     black_rings: 3
-    <!-- target diameter in millimeters -->
-    <!-- approximate A4 target size -->
-    size: 150.0
-    <!-- actual target size -->
-    <!-- size: 1500.0 -->
-    color:
+
+    <!-- Target diameter in meters -->
+    <!-- Approximate A4 target size -->
+    size: 0.15
+    <!-- Actual target size -->
+    <!-- size: 1.5 -->
+
+    <!-- Coarse find algo: distance, histogram, None otherwise (coarse returns whole picture) -->
+    coarse_algorithm: histogram
+
+    <!-- Configuration for distance find algo. -->
+    distance:
       lower_bound: [200, 200, 200]
       upper_bound: [255, 255, 255]
-    <!-- alg: distance, histogram, None otherwise (coarse returns whole picture) -->
-    coarse_algorithm: histogram
+      kernel_size: 30
   </rosparam>
 </launch>

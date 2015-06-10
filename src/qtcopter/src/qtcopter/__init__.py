@@ -8,3 +8,5 @@ from .FlyToMission import FlyToMission
 from .FlyToBase import FlyToBase
 from .SpiralSearch import SpiralSearch
 from .CenterAbove import CenterAbove
+
+from .DistanceFind import DistanceFind

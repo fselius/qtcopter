@@ -68,9 +68,10 @@ def debug_image(img, max_size=500):
     cv2.destroyWindow('bah')
 
 class HistogramFind(object):
-    def __init__(self, resize=500, channel=HLS_LIGHT_CHANNEL):
+    def __init__(self, diameter, resize=500, channel=HLS_LIGHT_CHANNEL):
         self.resize = resize
         self.channel = channel
+        self._radius = diameter/2.0
 
     def find_roi(self, image, height, camera):
         " Find ROI enclosing rectangle "
@@ -80,7 +81,7 @@ class HistogramFind(object):
             image = cv2.resize(image, (0,0), fx=ratio, fy=ratio)
 
         # find size of rectangle
-        rect_size = map(lambda _: int(ceil(_*ratio)), self.get_rect_size(height, camera))
+        rect_size = map(lambda _: int(ceil(_*ratio)), self.get_rect_size(self._radius, height, camera))
         rect_overlap = map(lambda _: int(ceil(RATIO_RECT_TO_OVERLAP*_)), rect_size)
         roi = find_roi(image, channel=self.channel,
                 rect_size=rect_size, overlap=rect_overlap)
@@ -100,7 +101,7 @@ class HistogramFind(object):
             image = cv2.resize(image, (0,0), fx=ratio, fy=ratio)
         image = get_light(image, channel=self.channel)
         # find size of rectangle
-        rect_size = map(lambda _: int(ceil(_*ratio)), self.get_rect_size(height, camera))
+        rect_size = map(lambda _: int(ceil(_*ratio)), self.get_rect_size(self._radius, height, camera))
         rospy.logdebug('HistogramFind rect_size=%r, image size=%r' % (rect_size, image.shape))
         rect_overlap = map(lambda _: int(ceil(RATIO_RECT_TO_OVERLAP*_)), rect_size)
         roi = roi_hist_ex(image, rect_size, rect_overlap)
@@ -118,14 +119,19 @@ class HistogramFind(object):
         # sort by area
         return sorted(contours, reverse=True, key=lambda c: cv2.contourArea(c))
 
+    def find_roi_rects(self, image, height, camera):
+        contours = self.find_roi_contours(image, height, camera)
+
+        return [cv2.boundingRect(c) for c in contours]
+
     @staticmethod
-    def get_rect_size(height, camera):
+    def get_rect_size(radius, height, camera):
         " Get rectangle size for histogram "
-        radius = rospy.get_param('target/size')/1000.0/2.0
         zero = camera.get_camera_offset((0, 0), height) # yep, this will most likely be zero..
         # TODO: Decide how big the histogram should be. Currently as big as target radius.
         bah = camera.get_camera_offset((radius, radius), height)
         rect_size = abs(bah[0]-zero[0]), abs(bah[1]-zero[1])
+        print(rect_size)
         return rect_size
 
 def get_light(image, channel=HLS_LIGHT_CHANNEL):
@@ -227,6 +233,8 @@ def iter_rect(x, y, width, height, rect_size, overlap, cover=True):
             rectangles in case they don't cover the whole outer rectangle
             (with the specified overlap)
     """
+    print(rect_size)
+    print(overlap)
     cols = range(x, x+width -rect_size[0]+1, rect_size[0]-overlap[0])
     rows = range(y, y+height-rect_size[1]+1, rect_size[1]-overlap[1])
     if cover:
