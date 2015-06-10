@@ -2,14 +2,20 @@
   <arg name="lense" default="6mm" />
   <arg name="camera_serial" default="TODO" />
 
+  <!-- General configuration -->
+  <include file="$(find qtcopter)/launch/config.launch" />
+
+  <!-- Mission node and configuration -->
   <include file="$(find qtcopter)/launch/balldrop_mission.launch">
   </include>
 
+  <!-- Drone camera -->
   <include file="$(find qtcopter)/launch/ptgrey.launch">
     <arg name="lense" value="$(arg lense)" />
     <arg name="camera_serial" value="$(arg camera_serial)" />
   </include>
 
+  <!-- Navigation and quadcopter nodes and configuration -->
   <include file="$(find qtcopter)/launch/navigation.launch">
   </include>
 </launch>

@@ -24,6 +24,8 @@ class RosStateMachine(StateMachine):
         else:
             self.__camera = camera
 
+        self.__config_max_height = rospy.get_param('config/max_height')
+
     def execute(self):
         self.__height_sub = Subscriber('height', Range)
         self.__image_sub = Subscriber('image', Image)
@@ -49,25 +51,19 @@ class RosStateMachine(StateMachine):
 
         rospy.logdebug('Received data from subscriptions.')
 
-        u = Userdata(self.__last_output)
-        u.publish_debug = self.publish_debug
-        u.publish_delta = self.publish_delta
-        u.height_msg = range_msg
-        u.camera = self.__camera
-        try:
-            u.image = self.__bridge.imgmsg_to_cv2(image_msg,
-                                                  desired_encoding='bgr8')
-        except CvBridgeError as error:
-            rospy.logerror(error)
-            return
+        u = self.create_userdata(range_msg=range_msg,
+                                 image_msg=image_msg)
         self.__last_output = self(u)
 
-    def publish_debug(self, image_callback):
-        if self._debug_pub.get_num_connections() <= 0:
+    def publish_debug(self, userdata, image_callback, *args):
+        if self.__debug_pub.get_num_connections() <= 0:
             return
 
-        image = image_callback()
-        img_msg = self._bridge.cv2_to_imgmsg(image, encoding='bgr8')
+        image = image_callback(userdata, *args)
+        if image is None:
+            return
+
+        img_msg = self.__bridge.cv2_to_imgmsg(image, encoding='bgr8')
         self.__debug_pub.publish(img_msg)
 
     def publish_delta(self, x, y, z, theta):
@@ -88,3 +84,24 @@ class RosStateMachine(StateMachine):
         msg.z = z
         msg.t = theta
         self.__pid_input_pub.publish(msg)
+
+    def publish_delta__keep_height(self, userdata, x, y, theta, target_height):
+        delta_z = target_height - userdata.height_msg.range
+        self.publish_delta(x, y, delta_z, theta)
+
+    def create_userdata(self, **kwargs):
+        u = Userdata(self.__last_output)
+        u.publish_debug_image = lambda cb, *args: self.publish_debug(u.image, cb, *args)
+        u.publish_delta = self.publish_delta
+        u.publish_delta__keep_height = lambda x, y, theta, target_height: self.publish_delta__keep_height(u, x, y, theta, target_height)
+        u.height_msg = kwargs['range_msg']
+        u.max_height = self.__config_max_height
+        u.camera = self.__camera
+        try:
+            u.image = self.__bridge.imgmsg_to_cv2(kwargs['image_msg'],
+                                                  desired_encoding='bgr8')
+        except CvBridgeError as error:
+            rospy.logerror(error)
+            return None
+
+        return u

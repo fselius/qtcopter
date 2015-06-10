@@ -10,11 +10,11 @@ class SpiralSearch:
         self.__find_func = find_func
 
     def __call__(self, userdata, output):
-        rois = self.__find_func(userdata.image)
-        if rois is None:
-            # No ROIs found, continue spiraling
-            # TODO: publish spiraling delta
-            return 'continue spiraling'
+        #rois = self.__find_func(userdata.image)
+        #if rois is None:
+        #    # No ROIs found, continue spiraling
+        #    # TODO: publish spiraling delta
+        #    return 'continue spiraling'
 
-        output.rois = rois
+        #output.rois = rois
         return 'found target'

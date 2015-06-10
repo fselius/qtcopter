@@ -36,6 +36,7 @@ if __name__ == '__main__':
                           'mission site reached': 'Spiral search for target',
                           'continue spiraling': 'Spiral search for target',
                           'found target': 'Center above target',
+                          'moving above target': 'Center above target',
                           'target lost': 'Spiral search for target',
                           'centered above target': 'Descend to target',
                           'drop height reached': 'Drop object on target',

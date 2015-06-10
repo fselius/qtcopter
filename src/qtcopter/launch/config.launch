@@ -1,0 +1,6 @@
+<launch>
+  <rosparam ns="config">
+    <!-- Maximum height in meters -->
+    max_height: 5
+  </rosparam>
+</launch>

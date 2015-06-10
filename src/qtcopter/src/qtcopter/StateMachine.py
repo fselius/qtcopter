@@ -1,4 +1,5 @@
 from . import Userdata
+import rospy
 
 
 class StateMachine:
@@ -22,10 +23,15 @@ class StateMachine:
         if outcome not in self.__states[self.current_state].outcomes:
             raise RuntimeError('Invalid outcome {0}.'.format(outcome))
         if outcome in self.__transitions:
-            self.current_state = self.__transitions[outcome]
+            next_state = self.__transitions[outcome]
+            if (next_state != self.current_state):
+                rospy.loginfo('Transition from "{0}" to "{1}".'
+                              .format(self.current_state, next_state))
+            self.current_state = next_state
         else:
             assert(outcome in self.__outcomes)
             self.current_state = self.FINAL_STATE
+            rospy.loginfo('State machine finished.')
         return output
 
     def is_finished(self):
