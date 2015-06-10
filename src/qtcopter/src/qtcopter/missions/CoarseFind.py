@@ -9,9 +9,10 @@ from qtcopter.navigation.Camera import default_camera
 from .utils import rect_contour
 
 class CoarseFind(MissionState):
-    def __init__(self, delta_pub, debug_pub, find_roi_func, camera=default_camera):
+    def __init__(self, delta_pub, pid_input_pub, debug_pub, find_roi_func, camera=default_camera):
         MissionState.__init__(self,
                               delta_pub,
+                              pid_input_pub,
                               debug_pub,
                               outcomes=['succeeded',
                                         'aborted'],

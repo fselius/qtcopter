@@ -1,6 +1,7 @@
 from cv_bridge import CvBridge, CvBridgeError
 from message_filters import ApproximateTimeSynchronizer, Subscriber
 from sensor_msgs.msg import Image, Range
+from qtcopter.msg import controller_msg
 import rospy
 import smach
 import threading
@@ -8,12 +9,13 @@ import tf
 
 
 class MissionState(smach.State):
-    def __init__(self, delta_pub, debug_pub, outcomes=[], input_keys=[], output_keys=[]):
+    def __init__(self, delta_pub, pid_input_pub, debug_pub, outcomes=[], input_keys=[], output_keys=[]):
         smach.State.__init__(self,
                              outcomes=outcomes,
                              input_keys=input_keys,
                              output_keys=output_keys)
         self._delta_pub = delta_pub
+        self._pid_input_pub = pid_input_pub
         self._debug_pub = debug_pub
         self._trigger_event = threading.Event()
         self._bridge = CvBridge()
@@ -32,6 +34,12 @@ class MissionState(smach.State):
                                       rospy.Time.now(),
                                       'waypoint',
                                       camera_frame)
+        msg = controller_msg()
+        msg.x = translation[0]
+        msg.y = translation[1]
+        msg.z = translation[2]
+        msg.t = theta
+        self._pid_input_pub.publish(msg)
 
     def publish_debug_image(self, callback):
         if self._debug_pub.get_num_connections() <= 0:

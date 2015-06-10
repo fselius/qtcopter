@@ -19,13 +19,36 @@ class PIDController:
         self.error=0
         print("Started PIDController with %s %s %s %s" %(kp,kd,ki,dt))
 
+
     def SetError(self, error):
         self.LastError = self.error
         self.error = error
         #print("Last error: %s, new error: %s" %(self.LastError, self.error))
 
     def GetFix(self):
-        #print("Integral: %s, Diverative %s" % (self.integral, self.kd*(self.error-self.LastError)/self.dt))
+        # Test it, it might be helpful, if not comment it
+        if(self.error>10):
+            self.integral=0
+            print "fix is 1600 error>10"
+            return 1600
+
+        if(self.error>3):
+            self.integral=0
+            print "fix is 1400, error >3 but <10"
+            return 1400
+
+        if(self.error<-10):
+            self.integral=0
+            print "fix is 1100, error greater than -10"
+            return 1200
+
+        if(self.error<-3):
+            self.integral=0
+            print "fix is 1200, error greater than -3 but less than -10"
+            return 1100
+
+        print "Error between -10 and 10, pid working"
+        #Comment until here if not needed
         self.integral += self.ki*self.error
         if self.integral > self.MaxLimit:
             self.integral = self.MaxLimit
@@ -36,41 +59,6 @@ class PIDController:
             output = self.MaxLimit
         elif output < self.MinLimit:
             output = self.MinLimit
-        print("Integral: %s, Diverative %s" % (self.integral, self.kd*(self.error-self.LastError)/self.dt))
+        print("Integral: %s, Diverative %s, fix: %s" % (self.integral, self.kd*(self.error-self.LastError)/self.dt, output+1000))
         return output + 1000
 
-
-
-# #PIDModule : A type for PID operations, all calculations logic are encapsulated
-# #within this class
-# class PIDModule:
-#
-#     def __init__(self, Kp, Kd, Ki, dt):
-#         self.__pid_sum = 0
-#         self.__Kp = Kp
-#         self.__Kd = Kd
-#         self.__Ki = Ki
-#         self.__lastTime = time.time()
-#         self.__dt = dt
-#
-#     def ProportionalMethod(self, delta_x):
-#         return self.__Kp * delta_x
-#
-#     def DifferentialMethod(self, delta_x, delta_t):
-#         try:
-#             return self.__Kd * (delta_x / delta_t)
-#         except ZeroDivisionError, e:
-#             print e
-#             #TODO: logger handling
-#
-#     def IntegralMethod(self, delta_x, delta_t):
-#         print ""
-#         #TODO: implement this
-#
-#     def GetPIDValue(self, delta):
-#         elapsed = time.time() - self.__lastTime
-#         self.__lastTime = time.time()
-#         self.__pid_sum = 0
-#         self.__pid_sum += self.ProportionalMethod(delta) + \
-#             self.DiffrentialMethod(delta, elapsed) + self.IntegralMethod(delta, elapsed)
-#         return self.__pid_sum

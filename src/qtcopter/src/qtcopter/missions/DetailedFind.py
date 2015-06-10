@@ -5,9 +5,10 @@ from ..navigation.Camera import default_camera as camera
 from .utils import rect_contour
 
 class DetailedFind(MissionState):
-    def __init__(self, delta_pub, debug_pub, find_object_center_func):
+    def __init__(self, delta_pub, pid_input_pub, debug_pub, find_object_center_func):
         MissionState.__init__(self,
                               delta_pub,
+                              pid_input_pub,
                               debug_pub,
                               input_keys=['rois'],
                               output_keys=['rois'],
