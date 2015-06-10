@@ -131,7 +131,6 @@ class HistogramFind(object):
         # TODO: Decide how big the histogram should be. Currently as big as target radius.
         bah = camera.get_camera_offset((radius, radius), height)
         rect_size = abs(bah[0]-zero[0]), abs(bah[1]-zero[1])
-        print(rect_size)
         return rect_size
 
 def get_light(image, channel=HLS_LIGHT_CHANNEL):
@@ -233,8 +232,6 @@ def iter_rect(x, y, width, height, rect_size, overlap, cover=True):
             rectangles in case they don't cover the whole outer rectangle
             (with the specified overlap)
     """
-    print(rect_size)
-    print(overlap)
     cols = range(x, x+width -rect_size[0]+1, rect_size[0]-overlap[0])
     rows = range(y, y+height-rect_size[1]+1, rect_size[1]-overlap[1])
     if cover:

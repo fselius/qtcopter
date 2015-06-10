@@ -13,3 +13,6 @@ class Userdata:
         if name in self.__dict__:
             raise RuntimeError("Can't overwrite {0}.".format(name))
         self.__dict__[name] = value
+
+    def __contains__(self, name):
+        return name in self.__dict__

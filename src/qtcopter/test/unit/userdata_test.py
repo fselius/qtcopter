@@ -35,3 +35,10 @@ def test_create_existing_overwrite():
     u.foo = 42
     u2 = Userdata(u)
     assert_raises(RuntimeError, setattr, u2, 'foo', 43)
+
+
+def test_contains():
+    u = Userdata()
+    assert_false('foo' in u)
+    u.foo = 42
+    assert_true('foo' in u)

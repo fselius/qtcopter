@@ -1,6 +1,6 @@
 import rospy
 import cv2
-from .pub_helpers import draw_roi
+from .pub_helpers import draw_rois
 
 
 class CenterAbove:
@@ -21,14 +21,8 @@ class CenterAbove:
         rospy.loginfo('Trying to find coarse ROI in image, height = {0}.'
                       .format(userdata.height_msg.range))
 
-        rois = self.__find_func(userdata.image, height=userdata.height_msg.range,
-                                camera=userdata.camera)
-        if rois is None or len(rois) == 0:
-            # No ROIs found, go back to spiraling
-            return 'target lost'
-
         # Publish ROIs for debugging.
-        userdata.publish_debug_image(draw_roi, rois)
+        userdata.publish_debug_image(draw_rois, roi)
         output.rois = rois
 
         # Choose first ROI (should be sorted)

@@ -2,5 +2,12 @@
   <rosparam ns="config">
     <!-- Maximum height in meters -->
     max_height: 5
+
+    spiral:
+      <!-- Time to complete a full circle, in seconds -->
+      spiral_time: 30.0
+
+      <!-- Spiral radius increase factor -->
+      spiral_factor: 1.2
   </rosparam>
 </launch>
