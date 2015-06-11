@@ -32,8 +32,7 @@
            This is a fine value for a person holding a camera in hands, to make
            the picture look sharp. However, on a quadcopter results may vary..
       -->
-      <!-- the following setting don't work. we get 30ms shutter anyway -->
-      <param name="shutter" value="0.005" />
+      <param name="shutter_speed" value="0.005" />
 
       <!-- gain is what we change from area to another area -->
       <!-- TODO: How do we experimentally choose the value? -->
