@@ -45,7 +45,7 @@ class Navigator:
         self.__currentPositionListener = rospy.Subscriber('/mavros/global_position/local',PoseWithCovarianceStamped,self.__GlobalPositionCallback)
         self.__rcMessage = RcMessage()
         self.__isArmed = False
-        self.__IsPublishAllowed = True
+        self.__IsPublishAllowedBool = True
 
     #Arm: arm/disarm the drone
     #param : armDisarmBool - true for arm, false for disarm
@@ -86,7 +86,7 @@ class Navigator:
         print "got here.........." + self.__currentMode.upper()
         rate = rospy.Rate(self.__navigatorParams["PublishRate"])
         while self.__currentMode.upper() == 'PID_ACTIVE' or self.__currentMode.upper() == 'PID_ACTIVE_HOLD_ALT':
-            if self.__IsPublishAllowed:
+            if self.__IsPublishAllowedBool:
                 stime = time.time()
                 try:
                     msg = rospy.wait_for_message('/pid/controller_command',controller_msg)
@@ -186,7 +186,7 @@ class Navigator:
             srv = rospy.ServiceProxy('/mavros/set_mode',SetMode)
             srv(base_mode=0, custom_mode='STABILIZE')
             print "Human override channel activated, publish disabled"
-            self.__IsPublishAllowed = False
+            self.__IsPublishAllowedBool = False
             #TBD: define logger behavior here
             return False
         else:
