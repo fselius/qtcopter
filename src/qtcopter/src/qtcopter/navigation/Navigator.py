@@ -45,6 +45,7 @@ class Navigator:
         self.__currentPositionListener = rospy.Subscriber('/mavros/global_position/local',PoseWithCovarianceStamped,self.__GlobalPositionCallback)
         self.__rcMessage = RcMessage()
         self.__isArmed = False
+        self.__IsPublishAllowed = True
 
     #Arm: arm/disarm the drone
     #param : armDisarmBool - true for arm, false for disarm
@@ -84,15 +85,21 @@ class Navigator:
     def __ConstantRatePublish(self, arg):
         print "got here.........." + self.__currentMode.upper()
         rate = rospy.Rate(self.__navigatorParams["PublishRate"])
-        #while self.__currentMode.upper() == 'PID_ACTIVE' or self.__currentMode.upper() == 'PID_ACTIVE_HOLD_ALT':
-        while True:
-            try:
-                msg = rospy.wait_for_message('/pid/controller_command',controller_msg)
-            except:
-                print "caught"
-            print("publishing : {0} {1} {2} {3}".format(msg.x,msg.y,msg.z,msg.t))
-            self.PublishRCMessage(msg.x, msg.y, msg.z, msg.t)
-            rate.sleep()
+        while self.__currentMode.upper() == 'PID_ACTIVE' or self.__currentMode.upper() == 'PID_ACTIVE_HOLD_ALT':
+            if self.__IsPublishAllowed:
+                stime = time.time()
+                try:
+                    msg = rospy.wait_for_message('/pid/controller_command',controller_msg)
+                except:
+                    print "caught"
+
+                self.PublishRCMessage(msg.x, msg.y, msg.z, msg.t)
+                rate.sleep()
+                etime = time.time()
+                print("publishing : {0} {1} {2} {3} elapsed:{4}".format(msg.x,msg.y,msg.z,msg.t,etime - stime))
+            else:
+                print "Human override activated, publishing thread stopping."
+                break
         return 1
 
     #SetCurrentMode : set the current mode of flight (navigator/set_mode callback)
@@ -108,7 +115,10 @@ class Navigator:
 
         self.__currentMode = mode.custom_mode
         var = mode.custom_mode.upper()
-        if var == 'ALT_HOLD':
+        if var == 'ARM':
+            srv(base_mode=0, custom_mode='STABILIZE')
+            self.Arm(True)
+        elif var == 'ALT_HOLD':
             srv(base_mode=0, custom_mode='ALT_HOLD')
         elif var == 'TAKEOFF':
             srv(base_mode=0, custom_mode='STABILIZE')
@@ -117,6 +127,8 @@ class Navigator:
         elif var == 'LAND':
             srv(base_mode=0, custom_mode='LAND')
             self.__isArmed = False
+        elif var == 'STABILIZE':
+            srv(base_mode=0, custom_mode='STABILIZE')
         elif var == 'PID_ACTIVE':
             srv(base_mode=0, custom_mode='STABILIZE')
             thread = Thread(target = self.__ConstantRatePublish, args = (int(mode.base_mode), ))
@@ -125,6 +137,7 @@ class Navigator:
             srv(base_mode=0, custom_mode='ALT_HOLD')
             thread = Thread(target = self.__ConstantRatePublish, args = (int(mode.base_mode), ))
             thread.start()
+            thread.
         elif var == 'PID_RESET':
             #TODO: reset pid logic here
             print "to be implemented"
@@ -167,20 +180,18 @@ class Navigator:
     #IsPublishAllowed : Make all safety checks in this method.
     #return value : True/False according to all safety checks.
     def __IsPublishAllowed(self):
-        #TODO: delete all debug printings
-        #print "calc: "  + str(time.time() - self.__humanOverrideElapsedTime)
-        #print "time: " + str(time.time())
-        #print "humanelapsed: " + str(self.__humanOverrideElapsedTime)
-        #print "humanFlag: " + str(self.__humanOverrideFlag)
-        #print "elapsedParam: " + str(self.__navigatorParams["HumanOverrideElapsedTimeAllowed"])
         if self.__humanOverrideFlag or self.__humanOverrideElapsedTime != 0 and \
                 (time.time() - self.__humanOverrideElapsedTime > self.__navigatorParams["HumanOverrideElapsedTimeAllowed"]):
             self.__rcMessage.ResetRcChannels()
             self.__rcOverrideTopic.publish(self.__rcMessage.GetRcMessage())
+            srv = rospy.ServiceProxy('/mavros/set_mode',SetMode)
+            srv(base_mode=0, custom_mode='STABILIZE')
             print "Human override channel activated, publish disabled"
+            self.__IsPublishAllowed = False
             #TBD: define logger behavior here
             return False
         else:
+            self.__IsPublishAllowed = True
             return True
 
 if __name__ == '__main__':
