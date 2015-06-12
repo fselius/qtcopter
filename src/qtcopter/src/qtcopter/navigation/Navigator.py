@@ -98,7 +98,7 @@ class Navigator:
                 etime = time.time()
                 print("publishing : {0} {1} {2} {3} elapsed:{4}".format(msg.x,msg.y,msg.z,msg.t,etime - stime))
             else:
-                print "Human override activated, publishing thread stopping."
+                print "Human override activated, publishing thread stopping..."
                 break
         return 1
 
