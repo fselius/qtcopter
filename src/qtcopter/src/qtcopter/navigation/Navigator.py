@@ -137,7 +137,6 @@ class Navigator:
             srv(base_mode=0, custom_mode='ALT_HOLD')
             thread = Thread(target = self.__ConstantRatePublish, args = (int(mode.base_mode), ))
             thread.start()
-            thread.
         elif var == 'PID_RESET':
             #TODO: reset pid logic here
             print "to be implemented"
