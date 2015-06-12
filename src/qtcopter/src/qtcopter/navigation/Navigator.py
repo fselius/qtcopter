@@ -190,7 +190,7 @@ class Navigator:
             #TBD: define logger behavior here
             return False
         else:
-            self.__IsPublishAllowed = True
+            self.__IsPublishAllowedBool = True
             return True
 
 if __name__ == '__main__':
