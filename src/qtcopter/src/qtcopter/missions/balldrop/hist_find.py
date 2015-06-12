@@ -9,7 +9,6 @@ center at 360, 250
 
 import cv2
 import sys
-import pylab
 import numpy as np
 from math import ceil
 from .utils import filter_contours
