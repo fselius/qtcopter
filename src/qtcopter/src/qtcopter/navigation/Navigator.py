@@ -69,6 +69,7 @@ class Navigator:
         if not self.__isArmed:
             self.Arm(True)
         currentHeight = 0
+        #TODO: cancel takeoff if human override activated
         while currentHeight < arg:
             self.PublishRCMessage(1500,1500,1400,1500)
             currentHeight = (rospy.wait_for_message('/mavros/global_position/rel_alt',Float64)).data
@@ -86,6 +87,7 @@ class Navigator:
         print "got here.........." + self.__currentMode.upper()
         rate = rospy.Rate(self.__navigatorParams["PublishRate"])
         while self.__currentMode.upper() == 'PID_ACTIVE' or self.__currentMode.upper() == 'PID_ACTIVE_HOLD_ALT':
+            print str(self.__IsPublishAllowedBool)
             if self.__IsPublishAllowedBool:
                 stime = time.time()
                 try:
@@ -166,6 +168,8 @@ class Navigator:
         threshHold = self.__navigatorParams["HumanOverrideThreshold"]
         if (val < self.__humanOverrideDefault - threshHold) or (val > self.__humanOverrideDefault + threshHold):
             self.__humanOverrideFlag = True
+        else:
+            self.__humanOverrideFlag = False
 
     def __GlobalPositionCallback(self, data):
         self.__currentGlobalPosition = data
