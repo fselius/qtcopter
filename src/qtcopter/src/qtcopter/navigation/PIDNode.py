@@ -11,15 +11,15 @@ config = Configuration.Configuration('/home/odroid/catkin_ws/src/qtcopter/src/qt
 #config = Configuration.Configuration('/home/noam/catkin_ws/src/qtcopter/src/qtcopter/src/qtcopter/navigation/PidConfig.json')
 
 class PIDManager:
-    def __init__(self, dt, minLimit, maxLimit):
+    def __init__(self, dt, normalizationFactor):
         xConfig = config.GetConfigurationSection("X")
         yConfig = config.GetConfigurationSection("Y")
         zConfig = config.GetConfigurationSection("Z")
         thetaConfig = config.GetConfigurationSection("Theta")
-        self.AxisControllers = {"X": PIDController(xConfig["KP"], xConfig["KD"], xConfig["KI"], dt, minLimit, maxLimit),
-                                "Y": PIDController(yConfig["KP"], yConfig["KD"], yConfig["KI"], dt, minLimit, maxLimit),
-                                "Z": PIDController(zConfig["KP"], zConfig["KD"], zConfig["KI"], dt, minLimit, maxLimit),
-                                "Theta": PIDController(thetaConfig["KP"], thetaConfig["KI"], thetaConfig["KD"], dt, minLimit, maxLimit)
+        self.AxisControllers = {"X": PIDController(xConfig["KP"], xConfig["KD"], xConfig["KI"], dt, xConfig["MinLimit"], xConfig["MaxLimit"],xConfig["NValue"], normalizationFactor),
+                                "Y": PIDController(yConfig["KP"], yConfig["KD"], yConfig["KI"], dt, yConfig["MinLimit"], yConfig["MaxLimit"],yConfig["NValue"], normalizationFactor),
+                                "Z": PIDController(zConfig["KP"], zConfig["KD"], zConfig["KI"], dt, zConfig["MinLimit"],zConfig["MaxLimit"],zConfig["NValue"], normalizationFactor),
+                                "Theta": PIDController(thetaConfig["KP"], thetaConfig["KI"], thetaConfig["KD"], dt, thetaConfig["MinLimit"],thetaConfig["MaxLimit"],thetaConfig["NValue"], normalizationFactor)
                                 }
         rospy.Subscriber("/pid_input", controller_msg, self.DataCollector)
 
@@ -42,11 +42,11 @@ if __name__ == '__main__':
         rospy.init_node('pid_node')
         pid_publisher = rospy.Publisher('/pid/controller_command',controller_msg,queue_size=1)
         generalConfig = config.GetConfigurationSection("General")
-        pidManager = PIDManager(generalConfig["Rate"], generalConfig["MinLimit"], generalConfig["MaxLimit"])
+        pidManager = PIDManager(generalConfig["Rate"], generalConfig["NormalizationFactor"])
         rate = rospy.Rate((int)(generalConfig["Rate"]))
         while not rospy.is_shutdown():
             fix = pidManager.Run()
-            rate.sleep()
             pid_publisher.publish(fix)
+            rate.sleep()
     except rospy.ROSInterruptException:
         pass

@@ -1,28 +1,39 @@
 {
     "X":{
-        "KP":"2",
-        "KD":"1",
-        "KI":"3"
+        "KP":"100",
+        "KD":"20",
+        "KI":"20",
+        "MinLimit":"400",
+        "MaxLimit":"600",
+        "NValue":"500"
     },
   "Y":{
-        "KP":"3",
-        "KD":"1",
-        "KI":"2"
+        "KP":"100",
+        "KD":"20",
+        "KI":"20",
+        "MinLimit":"400",
+        "MaxLimit":"600",
+        "NValue":"500"
     },
   "Z":{
-        "KP":"2",
-        "KD":"0",
-        "KI":"0.5"
+        "KP":"100",
+        "KD":"20",
+        "KI":"0.5",
+        "MinLimit":"000",
+        "MaxLimit":"700",
+        "NValue":"300"
     },
   "Theta":{
         "KP":"1",
         "KD":"3",
-        "KI":"2"
+        "KI":"2",
+        "MinLimit":"400",
+        "MaxLimit":"600",
+        "NValue":"500"
     },
   "General":{
     "Rate":"3",
-    "MinLimit": "500",
-    "MaxLimit": "550"
+    "NormalizationFactor":"1000"
   }
 
 }
