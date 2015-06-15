@@ -1,6 +1,7 @@
 <launch>
+  <!-- Camera mounted on the drone. -->
   <arg name="lense" default="6mm" />
-  <arg name="camera_serial" default="TODO" />
+  <arg name="camera_serial" default="15031847" />
 
   <!-- General configuration -->
   <include file="$(find qtcopter)/launch/config.launch" />

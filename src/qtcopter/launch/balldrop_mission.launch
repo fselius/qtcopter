@@ -16,6 +16,9 @@
     <!-- Actual target size -->
     <!-- size: 1.5 -->
 
+    <!-- Drop height in meters -->
+    drop_height: 2.0
+
     <!-- Coarse find algo: distance, histogram, None otherwise (coarse returns whole picture) -->
     coarse_algorithm: histogram
 

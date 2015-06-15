@@ -55,11 +55,11 @@ class RosStateMachine(StateMachine):
                                  image_msg=image_msg)
         self.__last_output = self(u)
 
-    def publish_debug(self, userdata, image_callback, *args):
+    def publish_debug(self, userdata, image_callback, *args, **kwargs):
         if self.__debug_pub.get_num_connections() <= 0:
             return
 
-        image = image_callback(userdata, *args)
+        image = image_callback(userdata, *args, **kwargs)
         if image is None:
             return
 
@@ -91,7 +91,7 @@ class RosStateMachine(StateMachine):
 
     def create_userdata(self, **kwargs):
         u = Userdata(self.__last_output)
-        u.publish_debug_image = lambda cb, *args: self.publish_debug(u.image, cb, *args)
+        u.publish_debug_image = lambda cb, *args, **kwargs: self.publish_debug(u.image, cb, *args, **kwargs)
         u.publish_delta = self.publish_delta
         u.publish_delta__keep_height = lambda x, y, theta, target_height: self.publish_delta__keep_height(u, x, y, theta, target_height)
         u.height_msg = kwargs['range_msg']
