@@ -68,13 +68,28 @@ class SpiralSearch:
     def publish_spiral(self, userdata, output):
         if 't' in userdata:
             output.t = userdata.t
+            dx, dy = userdata.optical_flow.get_movement(userdata.image)
+            output.dx = userdata.dx + dx
+            output.dy = userdata.dy + dy
         else:
+            rospy.loginfo('Start spiraling.')
             output.t = rospy.Time.now()
+            # Initialize optical flow.
+            userdata.optical_flow.get_movement(userdata.image)
+            output.dx = 0
+            output.dy = 0
+
         t = (rospy.Time.now() - output.t).to_sec()/self.__spiral_time
         a = self.__spiral_factor
         x = a*t*cos(t*2.0*pi)
         y = a*t*sin(t*2.0*pi)
-        userdata.publish_delta__keep_height(x=x, y=y, theta=0,
+
+        dx, dy = userdata.camera.get_ground_offset((output.dx, output.dy),
+                                                   userdata.height_msg.range)
+
+        userdata.publish_delta__keep_height(x=x-output.dx,
+                                            y=y-output.dy,
+                                            theta=0,
                                             target_height=userdata.max_height)
 
         return 'continue spiraling'

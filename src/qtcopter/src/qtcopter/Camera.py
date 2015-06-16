@@ -39,9 +39,9 @@ class Camera:
         if not camera_corner_offset:
             x, y = x+self.width/2., y+self.height/2.
 
-        # http://answers.ros.org/question/119506/what-does-projection-matrix-provided-by-the-calibration-represent/
+        # http://answers.ros.org/question/119506
         (x, y, h) = np.dot(self.K_inv, (x, y, 1))*distance
-        return x, y
+        return x/h, y/h
 
     def get_camera_offset(self, ground_offset, distance, camera_corner_offset=True):
         ''' get_camera_offset - Get camera offset in pixels from ground offset
@@ -51,7 +51,9 @@ class Camera:
                 camera_corner_offset - return camera offset from top left corner
         '''
         x, y = ground_offset
-        x, y, _ = np.dot(self.K, (x, y, distance))
+        x, y, h = np.dot(self.K, (x, y, distance))
+        x = x/h
+        y = y/h
         if not camera_corner_offset:
             x, y = x-self.width/2., y-self.height/2.
         return x, y
@@ -59,15 +61,32 @@ class Camera:
     @classmethod
     def from_ros(cls):
         import rospy
-        import camera_info_manager
+        from sensor_msgs.msg import CameraInfo
 
-        rospy.loginfo('Initializing camera from ROS.')
+        camera_name = rospy.get_param('camera/name')
+        rospy.loginfo('Initializing camera {0} from ROS.'.format(camera_name))
+        camera_info = rospy.wait_for_message('/camera_info', CameraInfo)
+
+        assert camera_name == camera_info.header.frame_id, "Camera name in config '{0}' does not match running camera node '{1}'.".format(camera_name, camera_info.header.frame_id)
+        return cls(camera_name, camera_info)
+
+    @classmethod
+    def from_file(cls):
+        import rospy
+        import camera_info_manager as cim
+
         camera_info_url = rospy.get_param('camera/info_url')
         camera_name = rospy.get_param('camera/name')
+
+        rospy.loginfo('Initializing camera {0} from {1}.'.format(
+                      camera_name,
+                      camera_info_url))
+
         if camera_info_url.upper().startswith('FILE://'):
-            camera_info = camera_info_manager.loadCalibrationFile(camera_info_url[7:], camera_name)
+            camera_info = cim.loadCalibrationFile(camera_info_url[7:],
+                                                  camera_name)
         else:
-            raise NotImplementedError("only urls of file:// type are supported for now")
+            raise NotImplementedError("Only urls of file:// type are supported for now")
             # if we want another url type, rip from here:
             # /opt/ros/indigo/lib/python2.7/dist-packages/camera_info_manager/camera_info_manager.py:
             # CameraInfoManager._loadCalibration

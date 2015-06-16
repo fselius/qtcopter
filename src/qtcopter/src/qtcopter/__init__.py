@@ -1,4 +1,5 @@
 from .Camera import Camera
+from .OpticalFlow import OpticalFlow
 
 from .Userdata import Userdata
 from .StateMachine import StateMachine

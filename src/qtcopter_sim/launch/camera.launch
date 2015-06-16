@@ -11,6 +11,8 @@
 
   <group unless="$(arg use_ptgrey)">
     <node pkg="usb_cam" type="usb_cam_node" name="camera" unless="$(arg use_ptgrey)">
+        <param name="camera_name" value="$(arg camera)" />
+        <param name="camera_info_url" value="file://$(find qtcopter_sim)/config/$(arg camera).yaml" />
         <remap from="camera/image_raw" to="/image" />
     </node>
     <param name="camera/info_url" value="file://$(find qtcopter_sim)/config/$(arg camera).yaml" />

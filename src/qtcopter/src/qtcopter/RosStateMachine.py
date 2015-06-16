@@ -1,4 +1,4 @@
-from . import Userdata, StateMachine, Camera
+from . import Userdata, StateMachine, Camera, OpticalFlow
 from cv_bridge import CvBridge, CvBridgeError
 from sensor_msgs.msg import Range, Image
 from qtcopter.msg import controller_msg
@@ -8,7 +8,8 @@ import tf
 
 
 class RosStateMachine(StateMachine):
-    def __init__(self, states, transitions, start, outcomes, camera=None):
+    def __init__(self, states, transitions, start, outcomes, camera=None,
+                 optical_flow=None):
         StateMachine.__init__(self, states, transitions, start, outcomes)
         self.__last_output = Userdata()
         self.__bridge = CvBridge()
@@ -23,6 +24,11 @@ class RosStateMachine(StateMachine):
             self.__camera = Camera.from_ros()
         else:
             self.__camera = camera
+
+        if optical_flow is None:
+            self.__optical_flow = OpticalFlow.from_ros()
+        else:
+            self.__optical_flow = optical_flow
 
         self.__config_max_height = rospy.get_param('config/max_height')
 
@@ -49,8 +55,6 @@ class RosStateMachine(StateMachine):
             del self.__sync
             return
 
-        rospy.logdebug('Received data from subscriptions.')
-
         u = self.create_userdata(range_msg=range_msg,
                                  image_msg=image_msg)
         self.__last_output = self(u)
@@ -69,15 +73,15 @@ class RosStateMachine(StateMachine):
     def publish_delta(self, x, y, z, theta):
         rospy.loginfo('Publish delta: x {0}, y {1}, z {2}, theta {3}'
                       .format(x, y, z, theta))
-        rotation = tf.transformations.quaternion_from_euler(0, 0, theta)
+        q = tf.transformations.quaternion_from_euler(0, 0, theta)
         # TODO: camera frame (down/forward)
         camera_frame = 'cam'
         self.__delta_pub.sendTransform((x, y, z),
-                                       rotation,
+                                       q,
                                        rospy.Time.now(),
                                        'waypoint',
                                        camera_frame)
-        # TODO
+        # TODO: remove legacy topic publish
         msg = controller_msg()
         msg.x = x
         msg.y = y
@@ -97,6 +101,7 @@ class RosStateMachine(StateMachine):
         u.height_msg = kwargs['range_msg']
         u.max_height = self.__config_max_height
         u.camera = self.__camera
+        u.optical_flow = self.__optical_flow
         try:
             u.image = self.__bridge.imgmsg_to_cv2(kwargs['image_msg'],
                                                   desired_encoding='bgr8')
