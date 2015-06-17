@@ -17,6 +17,7 @@ class RcMessage:
     def __init__(self):
         self.__rcChannels = OverrideRCIn().channels
 
+
     #GetRcMessage : packs a msg object and returns it to caller
     #return value : OverrideRCIn msg with channels set
     def GetRcMessage(self):
@@ -25,8 +26,10 @@ class RcMessage:
         return msg
 
     def ResetRcChannels(self):
+        print "Reseting RC channels input"
         for i in range(0,7):
-            self.__rcChannels[i] = OverrideRCIn.CHAN_NOCHANGE
+            self.__rcChannels[i] = OverrideRCIn.CHAN_RELEASE
+
 
     #set all rc_channels with mid value
     def BalanceRcChannels(self):
