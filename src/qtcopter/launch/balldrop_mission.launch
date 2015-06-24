@@ -27,5 +27,8 @@
       lower_bound: [200, 200, 200]
       upper_bound: [255, 255, 255]
       kernel_size: 30
+
+    <!-- Configuration for polarity find algo. -->
+    threshold: 100
   </rosparam>
 </launch>
