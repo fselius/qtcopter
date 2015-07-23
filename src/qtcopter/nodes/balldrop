@@ -29,7 +29,8 @@ if __name__ == '__main__':
         coarse_finder = NoFind()
 
     detailed_finder = PolarityFind(rospy.get_param('target/center_black', True),
-                                   rospy.get_param('target/black_rings', 3))
+                                   rospy.get_param('target/black_rings', 3),
+                                   rospy.get_param('target/threshold', 100))
 
     #mission_position = rospy.get_param('mission_site/offset')
     mission_position = None

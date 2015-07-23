@@ -12,10 +12,11 @@ import numpy as np
 
 
 class PolarityFind:
-    def __init__(self, center_black, number_of_rings, debug=True):
+    def __init__(self, center_black, number_of_rings, threshold, debug=True):
         self._center_black = center_black
         self._number_of_rings = number_of_rings
         self._debug = debug
+        self._threshold = threshold
 
     def find_contours(self, image):
         image = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
@@ -25,9 +26,7 @@ class PolarityFind:
             blurk += 1
         image = cv2.medianBlur(image, blurk)
 
-        # TODO: Fix the threshold. It worked better for us with 100, but we need to test.
-        #_, threshold = cv2.threshold(image, 180, 1, cv2.THRESH_BINARY)
-        _, threshold = cv2.threshold(image, 100, 1, cv2.THRESH_BINARY)
+        _, threshold = cv2.threshold(image, self._threshold, 1, cv2.THRESH_BINARY)
 
         if threshold is None or threshold.size == 0:
             return None, None
@@ -117,7 +116,7 @@ if __name__ == '__main__':
     image = cv2.imread(sys.argv[1])
 
     import cProfile
-    finder = PolarityFind(True, 3, debug=False)
+    finder = PolarityFind(True, 3, 100, debug=False)
     center, size = finder.find_target(image)
     #cProfile.run("center, size = finder.find_target(image)")
     print 'center:', center

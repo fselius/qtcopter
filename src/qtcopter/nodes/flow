@@ -1,0 +1,54 @@
+#!/usr/bin/env python2
+
+import rospy
+from mavros_extras.msgmsg import OpticalFlowRad
+
+class FlowHandler:
+    " Handle flow (px4flow OPTICAL_FLOW_RAD) messages to update location "
+    def __init__(self):
+        self._pubisher = tf.TransformBroadcaster()
+        self._listener = tf.TransformListener()
+        # TODO: make a frame for the flow
+        self._flow_frame = 'downward_cam_optical_frame'
+
+    def handle_optical_flow_rad(data):
+        dx = data.integrated_x*data.distance
+        dy = data.integrated_y*data.distance
+        z = data.distance
+
+        if data.quality == 0:
+            rospy.logwarn('Flow quality = 0 :(')
+            return
+            
+        # get latest (current) transformation
+        (translation, rot) = self._listener.lookupTransformation('waypoint',
+                                                           self._flow_frame,
+                                                           rospy.Time(0))
+        rospy.loginfo('Publish flow delta: x {0}, y {1}, z {2}, theta {3}'.format(translation[0],
+           translation[1],
+           translation[2],
+           theta))
+        translation[0] += dx
+        translation[1] += dy 
+        # publish (x+dx, y+dy, z)
+        self._publisher.sendTransform(translation,
+                                      rot,
+                                      rospy.Time.now(),
+                                      'waypoint',
+                                      self._camera_frame)
+        # TODO: also publish to pid_input?
+        # TODO: we can calculate heading direction from dx/dy.
+        if data.integration_time_us != 0:
+            # speed
+            speed_x = data.integrated_x/(1.0*data.integration_time_us/1e6)*data.distance
+            speed_y = data.integrated_y/(1.0*data.integration_time_us/1e6)*data.distance
+            
+            # time of data capture
+            capture_time = 1.0*data.time_usec/1e6
+
+if __name__ == '__main__':
+    rospy.init_node('flow')
+    flow = FlowHandler()
+    rospy.Subscriber("/px4flow/px4flow/raw/optical_flow_rad", OpticalFlowRad, flow.handle_optical_flow_rad)
+    rospy.spin()
+
