@@ -18,6 +18,7 @@
       "HumanOverrideDefault":1800,
       "HumanOverrideThreshold":100,
       "HumanOverrideElapsedTimeAllowed":2,
+      "HumanOverrideModeChange":"ALT_HOLD",
       "PublishRate":25
     },
     "modes":[
