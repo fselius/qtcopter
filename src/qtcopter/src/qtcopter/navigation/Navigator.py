@@ -76,10 +76,11 @@ class Navigator:
         if self.__numOfPublishThreads > 0:
             print "A publish thread is already running, cannot init another thread. Aborting."
             return 1
-        print "DEBUG: ConstantRatePublish Started" + self.__currentMode.upper()
+        print str(self.__humanOverride.Flag)
+        print str(self.__numOfPublishThreads)
+        self.__numOfPublishThreads += 1
         rate = rospy.Rate(self.__navigatorParams["PublishRate"])
         while self.__currentMode.upper() == 'PID_ACTIVE' or self.__currentMode.upper() == 'PID_ACTIVE_HOLD_ALT':
-            print str(self.__IsPublishAllowedBool)
             if not self.__humanOverride.Flag:
                 stime = time.time()
                 try:
@@ -90,6 +91,8 @@ class Navigator:
                     print("publishing : {0} {1} {2} {3} elapsed:{4}".format(msg.x,msg.y,msg.z,msg.t,etime - stime))
                 except:
                     print "ERROR : controller msg from pid topic did not process"
+                    self.__numOfPublishThreads = 0
+                    break
             else:
                 print "Human override activated, publishing thread stopping..."
                 self.__numOfPublishThreads = 0
@@ -149,6 +152,9 @@ class Navigator:
         self.__humanOverrideElapsedTime = time.time()
         val = data.channels[self.__navigatorParams["HumanOverrideChannel"]]
         threshHold = self.__navigatorParams["HumanOverrideThreshold"]
+
+        #if rc8 switch in the controller will be turned down -> mode will change to POS_HOLD/ALT_HOLD
+        #if rc8 switch in the controller will be turned up -> mode will change to LAND
         if (val < self.__humanOverrideDefault - threshHold):
             self.__humanOverride.ChangeToMode = self.__navigatorParams["HumanOverrideModeChange"]
             self.__humanOverride.Flag = True
@@ -179,8 +185,9 @@ if __name__ == '__main__':
     try:
         rospy.init_node('Navigator', anonymous=True)
         nav = Navigator()
-        while not rospy.is_shutdown():
-            time.sleep(0)
+        #while not rospy.is_shutdown():
+            #time.sleep(0)
+        rospy.spin()
     except rospy.ROSInterruptException:
         pass
 
