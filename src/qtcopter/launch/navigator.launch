@@ -1,5 +1,9 @@
 <launch>
- <node name="navigator" pkg="qtcopter" type="Navigator.py" cwd="node"/>
- <node name="pid_node" pkg="qtcopter" type="PIDNode.py" cwd="node"/>
+    <node name="navigator" pkg="qtcopter" type="Navigator.py" cwd="node"/>
+    <node name="pid_node" pkg="qtcopter" type="PIDNode.py" cwd="node"/>
+
+    <!-- px4flow -->
+    <include file="$(find qtcopter)/launch/px4flow.launch" />
+    <node pkg="qtcopter" type="flow" name="flow_node" output="screen" />
 </launch>
 

@@ -3,6 +3,7 @@
   <arg name="camera" unless="$(arg use_ptgrey)" />
   <arg name="lense" if="$(arg use_ptgrey)" />
   <arg name="camera_serial" if="$(arg use_ptgrey)" />
+  <arg name="video_device" default="/dev/video0" />
 
   <include file="$(find qtcopter)/launch/ptgrey.launch" if="$(arg use_ptgrey)">
     <arg name="lense" value="$(arg lense)" />
@@ -14,6 +15,7 @@
         <param name="camera_name" value="$(arg camera)" />
         <param name="camera_info_url" value="file://$(find qtcopter_sim)/config/$(arg camera).yaml" />
         <remap from="camera/image_raw" to="/image" />
+        <param name="video_device" value="$(arg video_device)" />
     </node>
     <param name="camera/info_url" value="file://$(find qtcopter_sim)/config/$(arg camera).yaml" />
     <param name="camera/name" value="$(arg camera)" />

@@ -1,42 +1,118 @@
 #!/usr/bin/env python2
 
 import rospy
-from mavros_extras.msgmsg import OpticalFlowRad
+from mavros_extras.msg import OpticalFlowRad
+from qtcopter.msg import controller_msg
+import tf
+from time import time, sleep
 
 class FlowHandler:
     " Handle flow (px4flow OPTICAL_FLOW_RAD) messages to update location "
     def __init__(self):
-        self._pubisher = tf.TransformBroadcaster()
         self._listener = tf.TransformListener()
+        self._publisher = tf.TransformBroadcaster()
+        tr = tf.Transformer()
         # TODO: make a frame for the flow
         self._flow_frame = 'downward_cam_optical_frame'
+        self.__pid_input_pub = rospy.Publisher('/pid_input', controller_msg,
+                                               queue_size=1)
+        self.last_good = 0
+        self.last_quality_warn = 0
+        self.allow_zero_quality = rospy.get_param('px4flow/allow_zero_quality', False)
 
-    def handle_optical_flow_rad(data):
+        # check if we already have transformation (if flow node restarted)
+        try:
+            ((x, y, z), rot) = self._listener.lookupTransform(self._flow_frame, 'waypoint', rospy.Time(0))
+        except tf.LookupException:
+            # no waypoint available
+            init_waypoint = True
+        else:
+            init_waypoint = False
+            theta = tf.transformations.euler_from_quaternion(rot)[2]
+            rospy.loginfo('Flow init: Using previous flow delta: x {0}, y {1}, z {2}, theta {3}'.format(
+                            x, y, z, theta))
+
+        if init_waypoint:
+            # set initial deltas to 0 (until we get something from CV)
+            x, y, z, theta = 0, 0, 0, 0
+            rot =  tf.transformations.quaternion_from_euler(0, 0, theta)
+            rospy.loginfo('Flow init: Publishing initial flow delta: x {0}, y {1}, z {2}, theta {3}'.format(
+                                            x, y, z, theta))
+            # for some reason, sendTransform() immediately on start / broadcaster creation
+            # will occasionally fail. it will work after about 100ms.
+            delay = 0.1 # seconds to wait between tries
+            max_init_time = 3 # seconds after which we fail
+            start = time()
+            while True:
+                self._publisher.sendTransform((x, y, z),
+                                          rot,
+                                          rospy.Time.now(),
+                                          'waypoint',
+                                          self._flow_frame)
+                try:
+                    self._listener.waitForTransform(self._flow_frame, 'waypoint', rospy.Time(0), rospy.Duration(delay))
+                except tf.Exception:
+                    # transform is probably still not available. try again :(
+                    if time()-start > max_init_time:
+                        # we tried for more than 3 seconds. abort
+                        rospy.logerr('FAILED publishing initial flow delta.')
+                        raise
+                    continue
+                # ok :) we got a transform!
+                break
+            rospy.loginfo('Published initial flow delta after {0} seconds'.format(time()-start))
+
+    def handle_optical_flow_rad(self, data):
+        if data.quality == 0:
+            if self.last_quality_warn+1 < time():
+                # only print warning every second
+                self.last_quality_warn = time()
+                rospy.logwarn('Flow quality = 0 for %d seconds' % (time()-self.last_good))
+            if not self.allow_zero_quality:
+                return
+        else:
+            self.last_good = time()
+
+        # TODO/FIXME/BUG: We have a race condition here that we must fix.
+        # If a new transform to the waypoint is submitted after we sampled it,
+        # and before we added the delta to it, we will overwrite the new value
+        # with the previous one (+delta). This is bad.
+        # get latest (current) transformation
+        try:
+            ((x, y, z), rot) = self._listener.lookupTransform(self._flow_frame,
+                                                            'waypoint',
+                                                            rospy.Time(0))
+        except (tf.LookupException, tf.ConnectivityException, tf.ExtrapolationException), e:
+            rospy.logwarn('Exception in handle_optical_flow_rad:lookupTransform(\'waypoint\'):')
+            rospy.logwarn(str(e))
+            return
+
+        # calculate flow addition
         dx = data.integrated_x*data.distance
         dy = data.integrated_y*data.distance
-        z = data.distance
+        # z is upwards :)
+        z = -data.distance
 
-        if data.quality == 0:
-            rospy.logwarn('Flow quality = 0 :(')
-            return
-            
-        # get latest (current) transformation
-        (translation, rot) = self._listener.lookupTransformation('waypoint',
-                                                           self._flow_frame,
-                                                           rospy.Time(0))
-        rospy.loginfo('Publish flow delta: x {0}, y {1}, z {2}, theta {3}'.format(translation[0],
-           translation[1],
-           translation[2],
-           theta))
-        translation[0] += dx
-        translation[1] += dy 
+        x += dx
+        y += dy
         # publish (x+dx, y+dy, z)
-        self._publisher.sendTransform(translation,
+        theta = tf.transformations.euler_from_quaternion(rot)[2]
+        rospy.loginfo('Publish flow delta: x {0}, y {1}, z {2}, theta {3}'.format(
+                                        x, y, z, theta))
+        self._publisher.sendTransform((x, y, z),
                                       rot,
                                       rospy.Time.now(),
                                       'waypoint',
-                                      self._camera_frame)
-        # TODO: also publish to pid_input?
+                                      self._flow_frame)
+        # publish to PID
+        # TODO: Update theta from compass!
+        msg = controller_msg()
+        msg.x = x
+        msg.y = y
+        msg.z = z
+        msg.t = theta
+        self.__pid_input_pub.publish(msg)
+
         # TODO: we can calculate heading direction from dx/dy.
         if data.integration_time_us != 0:
             # speed
@@ -44,7 +120,7 @@ class FlowHandler:
             speed_y = data.integrated_y/(1.0*data.integration_time_us/1e6)*data.distance
             
             # time of data capture
-            capture_time = 1.0*data.time_usec/1e6
+            capture_time = data.header.stamp.secs + data.header.stamp.nsecs/1e9
 
 if __name__ == '__main__':
     rospy.init_node('flow')

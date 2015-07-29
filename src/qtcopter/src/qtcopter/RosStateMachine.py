@@ -17,8 +17,8 @@ class RosStateMachine(StateMachine):
         # Publishers
         self.__delta_pub = tf.TransformBroadcaster()
         self.__debug_pub = rospy.Publisher('/debug_image', Image, queue_size=1)
-        self.__pid_input_pub = rospy.Publisher('/pid_input', controller_msg,
-                                               queue_size=1)
+        #self.__pid_input_pub = rospy.Publisher('/pid_input', controller_msg,
+        #                                       queue_size=1)
 
         if camera is None:
             self.__camera = Camera.from_ros()
@@ -75,7 +75,7 @@ class RosStateMachine(StateMachine):
                       .format(x, y, z, theta))
         q = tf.transformations.quaternion_from_euler(0, 0, theta)
         # TODO: camera frame (down/forward)
-        camera_frame = 'cam'
+        camera_frame = 'downward_cam_optical_frame'
         self.__delta_pub.sendTransform((x, y, z),
                                        q,
                                        rospy.Time.now(),
@@ -87,7 +87,7 @@ class RosStateMachine(StateMachine):
         msg.y = y
         msg.z = z
         msg.t = theta
-        self.__pid_input_pub.publish(msg)
+        #self.__pid_input_pub.publish(msg)
 
     def publish_delta__keep_height(self, userdata, x, y, theta, target_height):
         delta_z = target_height - userdata.height_msg.range
