@@ -12,7 +12,7 @@
 
     <node pkg="nodelet" type="nodelet" name="camera_nodelet"
           args="load pointgrey_camera_driver/PointGreyCameraNodelet camera_nodelet_manager" >
-      <param name="frame_id" value="camera" />
+      <param name="frame_id" value="ptgrey_$(arg camera_serial)_$(arg lense)" />
       <param name="serial" value="$(arg camera_serial)" />
 
       <!-- When unspecified, the driver will use the default framerate as given by the
