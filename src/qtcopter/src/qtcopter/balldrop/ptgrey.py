@@ -161,7 +161,7 @@ if __name__=='__main__':
     # video mode
     m, f = c.context.get_video_mode_and_frame_rate()
     print 'video mode', m, f, VIDEOMODE[m], FRAMERATE[f]
-    print 'video mode info:', c.context.get_video_mode_and_frame_rate_info(m, f)
+    #print 'video mode info:', c.context.get_video_mode_and_frame_rate_info(m, f)
 
     # set video mode
     #x = c.context.set_video_mode_and_frame_rate(fc2.VIDEOMODE_1280x960RGB, fc2.FRAMERATE_3_75)
