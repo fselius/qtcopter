@@ -3,10 +3,9 @@
 import rospy
 from mavros_extras.msg import OpticalFlowRad
 from qtcopter.msg import controller_msg
-from sensor_msgs.msg import Range
-
 import tf
 from time import time, sleep
+from ptgrey import PTGreyCamera
 
 class FlowHandler:
     " Handle flow (px4flow OPTICAL_FLOW_RAD) messages to update location "
@@ -18,7 +17,6 @@ class FlowHandler:
         self._flow_frame = 'downward_cam_optical_frame'
         self.__pid_input_pub = rospy.Publisher('/pid_input', controller_msg,
                                                queue_size=1)
-        #self.__height_pub = rospy.Publisher('/height_flow', Range, queue_size=1)
         self.last_good = 0
         self.last_quality_warn = 0
         self.allow_zero_quality = rospy.get_param('px4flow/allow_zero_quality', False)
@@ -96,9 +94,10 @@ class FlowHandler:
         dy = data.integrated_y*data.distance
         if self.previous_height is None:
             self.previous_height = data.distance
-
+        
         dz = data.distance - self.previous_height
         self.previous_height = data.distance
+        print 'dz:', dz
         z += dz
         x += dx
         y += dy
@@ -121,11 +120,6 @@ class FlowHandler:
         msg.t = theta
         self.__pid_input_pub.publish(msg)
 
-        #r = Range()
-        #r.range = data.distance
-        #rospy.loginfo('Publish flow height: {0} meters'.format(r.range))
-        #self.__height_pub.publish(r)
-
         # TODO: we can calculate heading direction from dx/dy.
         if data.integration_time_us != 0:
             # speed
@@ -136,8 +130,26 @@ class FlowHandler:
             capture_time = data.header.stamp.secs + data.header.stamp.nsecs/1e9
 
 if __name__ == '__main__':
-    rospy.init_node('flow')
-    flow = FlowHandler()
+    rospy.init_node('myptgrey')
     rospy.Subscriber("/px4flow/px4flow/raw/optical_flow_rad", OpticalFlowRad, flow.handle_optical_flow_rad)
+
+    gain = 0
+
+    c = PTGreyCamera()
+    # set manual values
+    c.set_property_manual(fc2.AUTO_EXPOSURE, 0) # exposure = 0, we don't modify this. I'm not sure, but it had no effect.
+    c.set_property_manual(fc2.SHUTTER, args.shutter) # 10ms shutter (1/100, hopefully fast enough)
+    # if frame_rate is too high, it is set to maximum :)
+    c.set_property_manual(fc2.FRAME_RATE, rospy.get_param('camera/gain', False)) # maximum framerate
+    c.set_property_manual(fc2.GAIN, args.gain)
+    c.print_infos()
+
+    c.start_capture()
+    finder = RANSACFind(True, 3, debug=args.debug)
+
+    try:
+        while True:
+            img = c.get_frame()
+
     rospy.spin()
 

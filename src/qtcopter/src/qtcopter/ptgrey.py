@@ -1,7 +1,7 @@
 #!/usr/bin/env python2
 
 import sys
-import time
+from time import time
 from math import ceil, floor
 import argparse
 
@@ -180,9 +180,13 @@ if __name__=='__main__':
 
     c.start_capture()
     while True:
+        t = time()
         f = c.get_frame()
+        t = time()-t
+        print '%.3fs, %.2f fps' % (t, 1/t)
         try:
-            show_img(f, wait=False)
+            pass
+            #show_img(f, wait=False)
         except KeyboardInterrupt:
             break
 

@@ -15,7 +15,7 @@ import numpy as np
 import cv2
 import cv
 
-from ptgrey import PTGreyCamera, VIDEOMODE, FRAMERATE
+from qtcopter.ptgrey import PTGreyCamera, VIDEOMODE, FRAMERATE
 
 def show_img(img):
     while max(img.shape[:2]) > 500:
