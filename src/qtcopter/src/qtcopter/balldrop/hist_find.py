@@ -14,7 +14,7 @@ from math import ceil
 from .utils import filter_contours
 import rospy
 
-from qtcopter.navigation.Camera import Camera
+from qtcopter.Camera import Camera
 
 
 # constants
