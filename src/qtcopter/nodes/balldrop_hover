@@ -1,0 +1,48 @@
+#!/usr/bin/env python2
+
+from qtcopter import DistanceFind
+from qtcopter import RosStateMachine as StateMachine
+from qtcopter import FlyToMission, FlyToBase
+from qtcopter import SpiralSearch, CenterAbove
+from qtcopter.balldrop import DescendToTarget, DropObject
+from qtcopter.balldrop import HistogramFind, PolarityFind
+import rospy
+
+
+class NoFind:
+    def find_roi_rects(self, image, **kwargs):
+        return [(0, 0, image.shape[1], image.shape[0])]
+
+if __name__ == '__main__':
+    rospy.init_node('balldrop_mission')
+
+    coarse_alg = rospy.get_param('target/coarse_algorithm', 'histogram')
+    target_diameter = rospy.get_param('target/size')
+
+    if coarse_alg == 'histogram':
+        coarse_finder = HistogramFind(diameter=target_diameter)
+    elif coarse_alg == 'distance':
+        coarse_finder = DistanceFind(rospy.get_param('target/distance/lower_bound', [200, 200, 200]),
+                                     rospy.get_param('target/distance/upper_bound', [255, 255, 255]),
+                                     kernel_size=rospy.get_param('target/distance/kernel_size', 30))
+    else:
+        coarse_finder = NoFind()
+
+    detailed_finder = PolarityFind(rospy.get_param('target/center_black', True),
+                                   rospy.get_param('target/black_rings', 3),
+                                   rospy.get_param('target/threshold', 100))
+
+    #mission_position = rospy.get_param('mission_site/offset')
+    mission_position = None
+
+    sm = StateMachine(states={
+                          'Center above target': CenterAbove(detailed_finder.find_target),
+                      },
+                      transitions={
+                          'moving above target': 'Center above target',
+                          'target lost': 'Center above target', # yeah, that's stupid. until we have SpiralSearch, we just retry.
+                      },
+                      start='Fly to mission site',
+                      outcomes='centered above target')
+    sm.execute()
+    rospy.spin()
