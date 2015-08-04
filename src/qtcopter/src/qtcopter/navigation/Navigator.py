@@ -15,6 +15,7 @@ from geometry_msgs.msg import PoseWithCovarianceStamped
 from mavros.msg import RCIn
 from std_msgs.msg import Float64
 from qtcopter.msg import controller_msg
+from qtcopter.srv import *
 
 config = Configuration("NavConfig.json")
 
@@ -49,12 +50,14 @@ class Navigator:
         self.__rcMessage = RcMessage()
         self.__humanOverride = HumanOverride()
         self.__humanOverride.Flag = False
+        self.__keepPidRunning = True
         self.__numOfPublishThreads = 0
         self.__isArmed = False
         self.__isRcReseted = False
         self.__rcMessage.ResetRcChannels()
         time.sleep(1) # because ROS is so fucked up
         self.__rcOverrideTopic.publish(self.__rcMessage.GetRcMessage())
+        self.__pidControlService = rospy.ServiceProxy('/pid_control', PidControlSrv)
 
     #Arm: arm/disarm the drone
     #param : armDisarmBool - true for arm, false for disarm
@@ -83,7 +86,7 @@ class Navigator:
         self.__numOfPublishThreads += 1
         rate = rospy.Rate(self.__navigatorParams["PublishRate"])
         while self.__currentMode.upper() == 'PID_ACTIVE' or self.__currentMode.upper() == 'PID_ACTIVE_HOLD_ALT':
-            if not self.__humanOverride.Flag:
+            if not self.__humanOverride.Flag and self.__keepPidRunning:
                 stime = time.time()
                 try:
                     msg = rospy.wait_for_message('/pid/controller_command',controller_msg)
@@ -124,15 +127,18 @@ class Navigator:
             self.__setModeMavros(base_mode=0, custom_mode='STABILIZE')
         elif var == 'PID_ACTIVE':
             self.__setModeMavros(base_mode=0, custom_mode='STABILIZE')
+            self.__pidControlService(True)
+            self.__keepPidRunning=True
             thread = Thread(target = self.__ConstantRatePublish, args = (int(mode.base_mode), ))
             thread.start()
         elif var == 'PID_ACTIVE_HOLD_ALT':
             self.__setModeMavros(base_mode=0, custom_mode='ALT_HOLD')
             thread = Thread(target = self.__ConstantRatePublish, args = (int(mode.base_mode), ))
             thread.start()
-        elif var == 'PID_RESET':
-            #TODO: reset pid logic here
-            print "to be implemented"
+        elif var == 'PID_STOP':
+            self.__keepPidRunning=False
+            self.__pidControlService(False)
+
 
         print "Navigator is changing flight mode"
         print "mode: " + self.__currentMode.upper()

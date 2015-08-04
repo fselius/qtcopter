@@ -86,10 +86,10 @@ class PIDManager:
     #======================================================================
     def Run(self):
         if self.IsRunning:
-            self.message.x = self.AxisControllers["X"].GetFix()
-            self.message.z = self.AxisControllers["Z"].GetFix()
-            self.message.y = self.AxisControllers["Y"].GetFix()
-            self.message.t = self.AxisControllers["Theta"].GetFix()
+            self.message.x = float(self.AxisControllers["X"].GetFix())
+            self.message.z = float(self.AxisControllers["Z"].GetFix())
+            self.message.y = float(self.AxisControllers["Y"].GetFix())
+            self.message.t = float(self.AxisControllers["Theta"].GetFix())
             self.PidOutputTopic.publish(self.message)
 
     #======================================================================

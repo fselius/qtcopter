@@ -65,11 +65,11 @@ class PIDController:
         err = self.error
         lastError = self.LastError
 
-        #if err is less than epsilon, no fix is needed
-        #the nominal value is returned
-        #1500 for roll,pitch,yaw and aroun 1300 for throttle
-        if abs(err)<self.epsilon:
-            return self.nValue #maybe need to return here NO_CHANGE from RCMessageOverride constant
+        # #if err is less than epsilon, no fix is needed
+        # #the nominal value is returned
+        # #1500 for roll,pitch,yaw and aroun 1300 for throttle
+        # if abs(err)<self.epsilon:
+        #     return self.nValue #maybe need to return here NO_CHANGE from RCMessageOverride constant
 
         #Error Ranges in meters
         #Divide err to ranges: Greated than 10, Between 3 and 10, Greater then -10 (error to different
