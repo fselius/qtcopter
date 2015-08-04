@@ -1,6 +1,6 @@
 <launch>
   <!-- Mission node -->
-  <node pkg="qtcopter" type="balldrop" name="balldrop_mission" output="screen" />
+  <node pkg="qtcopter" type="balldrop" name="balldrop_mission_hover" output="screen" />
 
   <!-- Mission configuration -->
   <rosparam ns="target">
@@ -32,7 +32,6 @@
     threshold: 100
   </rosparam>
   <rosparam ns="cv">
-    <!-- how frequent should CV run -->
     fps: 0.5
   </rosparam>
 </launch>

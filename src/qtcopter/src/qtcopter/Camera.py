@@ -6,7 +6,7 @@ This module provides camera functionality:
 - Pixel/distance conversion
 '''
 import numpy as np
-
+from time import sleep
 
 class Camera:
     ''' A class representing a camera. This can be either the current camera,
@@ -61,11 +61,22 @@ class Camera:
     @classmethod
     def from_ros(cls):
         import rospy
-        from sensor_msgs.msg import CameraInfo
+        from sensor_msgs.msg import CameraInfo, Image
 
         camera_name = rospy.get_param('camera/name')
         rospy.loginfo('Initializing camera {0} from ROS.'.format(camera_name))
-        camera_info = rospy.wait_for_message('/camera_info', CameraInfo)
+        while True:
+            try:
+                camera_info = rospy.wait_for_message('/camera/camera_info', CameraInfo, timeout=0.1)
+            except:
+                # timeout..
+                rospy.loginfo('Initializing.. camera {0} from ROS.'.format(camera_name))
+                img = rospy.wait_for_message('/image', Image)
+            else:
+                break
+
+        # get dummy frame to make camera send camera_info
+        rospy.loginfo('Initialized camera {0} from ROS.'.format(camera_name))
 
         assert camera_name == camera_info.header.frame_id, "Camera name in config '{0}' does not match running camera node '{1}'.".format(camera_name, camera_info.header.frame_id)
         return cls(camera_name, camera_info)

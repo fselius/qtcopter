@@ -7,7 +7,7 @@
   <include file="$(find qtcopter)/launch/config.launch" />
 
   <!-- Mission node and configuration -->
-  <include file="$(find qtcopter)/launch/balldrop_mission.launch">
+  <include file="$(find qtcopter)/launch/balldrop_mission_hover.launch">
   </include>
 
   <!-- Drone camera -->

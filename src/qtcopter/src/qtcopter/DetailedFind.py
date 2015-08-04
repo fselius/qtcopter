@@ -25,7 +25,7 @@ class DetailedFind(MissionState):
         offset = [center[0]-camera.width/2.0, center[1]-camera.height/2.0]
         # Get distance in millimetres
 
-        # find size at 1meter
+        # find size at 1 meter
         p1 = (center[0]-estimated_size/2.0, center[1])
         p2 = (center[0]+estimated_size/2.0, center[1])
         p1 = camera.get_ground_offset(p1, 1)

@@ -15,7 +15,7 @@ class MissionState(smach.State):
                              input_keys=input_keys,
                              output_keys=output_keys)
         self._delta_pub = delta_pub
-        self._pid_input_pub = pid_input_pub
+        #self._pid_input_pub = pid_input_pub
         self._debug_pub = debug_pub
         self._trigger_event = threading.Event()
         self._bridge = CvBridge()
@@ -39,7 +39,7 @@ class MissionState(smach.State):
         msg.y = translation[1]
         msg.z = translation[2]
         msg.t = theta
-        self._pid_input_pub.publish(msg)
+        #self._pid_input_pub.publish(msg)
 
     def publish_debug_image(self, callback):
         if self._debug_pub.get_num_connections() <= 0:

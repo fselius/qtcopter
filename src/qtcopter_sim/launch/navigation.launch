@@ -1,4 +1,7 @@
 <launch>
-  <!-- Simulated navigation components -->
-  <node pkg="qtcopter_sim" type="rangepub" name="publish_height" args="/height 3.0 -r 50" />
+    <!-- Simulated navigation components -->
+    <node pkg="qtcopter_sim" type="rangepub" name="publish_height" args="/height 3.0 -r 50" />
+    <!-- px4flow -->
+    <include file="$(find qtcopter)/launch/px4flow.launch" />
+    <node pkg="qtcopter" type="flow" name="flow_node" output="screen" />
 </launch>
