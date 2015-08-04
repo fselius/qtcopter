@@ -51,7 +51,9 @@ class Navigator:
         self.__humanOverride.Flag = False
         self.__numOfPublishThreads = 0
         self.__isArmed = False
+        self.__isRcReseted = False
         self.__rcMessage.ResetRcChannels()
+        time.sleep(1) # because ROS is so fucked up
         self.__rcOverrideTopic.publish(self.__rcMessage.GetRcMessage())
 
     #Arm: arm/disarm the drone
@@ -149,32 +151,39 @@ class Navigator:
     #HumanOverrideCallback : Constantly checking rc/override HumanOverride channel and maintaining a
     #boolean flag according to that
     def __HumanOverrideCallback(self, data):
-        self.__humanOverrideElapsedTime = time.time()
-        val = data.channels[self.__navigatorParams["HumanOverrideChannel"]]
-        threshHold = self.__navigatorParams["HumanOverrideThreshold"]
+        if not self.__isRcReseted:
+            self.__humanOverrideElapsedTime = time.time()
+            val = data.channels[self.__navigatorParams["HumanOverrideChannel"]]
+            threshHold = self.__navigatorParams["HumanOverrideThreshold"]
 
-        #if rc8 switch in the controller will be turned down -> mode will change to POS_HOLD/ALT_HOLD
-        #if rc8 switch in the controller will be turned up -> mode will change to LAND
-        if (val < self.__humanOverrideDefault - threshHold):
-            self.__humanOverride.ChangeToMode = self.__navigatorParams["HumanOverrideModeChange"]
-            self.__humanOverride.Flag = True
-        elif (val > self.__humanOverrideDefault + threshHold):
-            self.__humanOverride.ChangeToMode = 'LAND'
-            self.__humanOverride.Flag = True
+            #if rc8 switch in the controller will be turned down -> mode will change to POS_HOLD/ALT_HOLD
+            #if rc8 switch in the controller will be turned up -> mode will change to LAND
+            if (val < self.__humanOverrideDefault - threshHold):
+                self.__humanOverride.Flag = True
+                self.__AfterHumanOverridePublish()
+                self.__humanOverride.ChangeToMode = self.__navigatorParams["HumanOverrideModeChange"]
+            elif (val > self.__humanOverrideDefault + threshHold):
+                self.__humanOverride.Flag = True
+                self.__AfterHumanOverridePublish()
+                self.__humanOverride.ChangeToMode = 'LAND'
+
+    #Performs as reset to all rc channels to bring control back to the operator
+    def __AfterHumanOverridePublish(self):
+        self.__rcMessage.PrepareForArming() #(pitch,roll,yaw)<-1500, throttle<-1000
+        self.__rcOverrideTopic.publish(self.__rcMessage.GetRcMessage())
+        self.__rcMessage.ResetRcChannels() #release all channels to allow human full control
+        self.__rcOverrideTopic.publish(self.__rcMessage.GetRcMessage())
+        self.__isRcReseted = True
+
 
     #IsPublishAllowed : Make all safety checks in this method.
     #return value : True/False according to all safety checks.
     def __IsPublishAllowed(self):
-
         if self.__humanOverride.Flag or self.__humanOverrideElapsedTime != 0 and \
                 (time.time() - self.__humanOverrideElapsedTime > self.__navigatorParams["HumanOverrideElapsedTimeAllowed"]):
-            self.__rcMessage.PrepareForArming() #(pitch,roll,yaw)<-1500, throttle<-1000
-            self.__rcOverrideTopic.publish(self.__rcMessage.GetRcMessage())
-            self.__rcMessage.ResetRcChannels() #release all channels to allow human full control
-            self.__rcOverrideTopic.publish(self.__rcMessage.GetRcMessage())
             self.__setModeMavros(base_mode=0, custom_mode=str(self.__humanOverride.ChangeToMode))
             print "DEBUG: (IsPublishAllowed):Human override channel activated, publish disabled"
-            print("DEBUG: Navigator is changing to mode {0}".format(self.__humanOverride.ChangeToMode))
+            print("DEBUG: (IsPublishAllowed):Navigator is changing to mode {0}".format(self.__humanOverride.ChangeToMode))
             #TBD: define logger behavior here
             return False
         else:
