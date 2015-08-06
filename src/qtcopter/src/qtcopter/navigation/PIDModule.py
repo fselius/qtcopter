@@ -35,7 +35,7 @@ class PIDController:
         self.error = 0
 
         #used to normalize factor
-        self.normalizationFactor = normalizationFactor
+        self.normalizationFactor = float(normalizationFactor)
         self.nValue = nValue
 
         #used for float diff comparison
