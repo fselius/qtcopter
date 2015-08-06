@@ -3,19 +3,14 @@
 
 import time
 import rospy
-from mavros.msg import OverrideRCIn
-from mavros.srv import CommandBool, CommandLong
-from mavros.srv import SetMode
-from rospy.core import rospydebug
+from mavros.msg import OverrideRCIn, RCIn
+from mavros.srv import SetMode, StreamRate, CommandBool, StreamRateRequest
 from threading import Thread
 from RcMessage import RcMessage
-from mavros.msg import State
 from Configuration import Configuration
-from geometry_msgs.msg import PoseWithCovarianceStamped
-from mavros.msg import RCIn
-from std_msgs.msg import Float64
 from qtcopter.msg import controller_msg
 from qtcopter.srv import *
+import inspect
 
 config = Configuration("NavConfig.json")
 
@@ -45,19 +40,19 @@ class Navigator:
         self.__setModeService = rospy.Service('navigator/set_mode', SetMode, self.__SetCurrentMode)
         self.__armingService = rospy.ServiceProxy('/mavros/cmd/arming', CommandBool)
         self.__setModeMavros = rospy.ServiceProxy('/mavros/set_mode',SetMode)
+        self.__pidControlService = rospy.ServiceProxy('/pid_control', PidControlSrv)
         self.__rcOverrideTopic = rospy.Publisher('/mavros/rc/override',OverrideRCIn,queue_size = 10) #TBD : how to determine queue size
         self.__rcInListener = rospy.Subscriber('/mavros/rc/in',RCIn,self.__HumanOverrideCallback)
         self.__rcMessage = RcMessage()
         self.__humanOverride = HumanOverride()
         self.__humanOverride.Flag = False
-        self.__keepPidRunning = True
+        self.__isPidRunning = True
         self.__numOfPublishThreads = 0
         self.__isArmed = False
         self.__isRcReseted = False
         self.__rcMessage.ResetRcChannels()
         time.sleep(1) # because ROS is so fucked up
         self.__rcOverrideTopic.publish(self.__rcMessage.GetRcMessage())
-        self.__pidControlService = rospy.ServiceProxy('/pid_control', PidControlSrv)
 
     #Arm: arm/disarm the drone
     #param : armDisarmBool - true for arm, false for disarm
@@ -71,37 +66,38 @@ class Navigator:
             self.__armingService(armDisarmBool)
             self.__isArmed = True
         except rospy.ServiceException as ex:
-            print("Service did not process request: " + str(ex))
+            self.__PrintDebugMessage("Service did not process request: " + str(ex))
             return False
+
+    #def __SetStreamRateOnAllTopics(self, rate):
+        #setRate = rospy.ServiceProxy('/mavros/set_stream_rate',StreamRate)
+        #setRate(stream_id=StreamRateRequest.STREAM_RC_CHANNELS, message_rate=rate , on_off=(rate != 0))
 
     #ConstantRatePublish : publishing the outputs of pid_controller to rc_override channels
     #at 25hz rate (defined in configuration file).
     #runs as a separate thread so the set_mode service won't be occupied.
     def __ConstantRatePublish(self, arg):
         if self.__numOfPublishThreads > 0:
-            print "A publish thread is already running, cannot init another thread. Aborting."
+            self.__PrintDebugMessage("A publish thread is already running, cannot init another thread. Aborting.")
             return 1
-        print str(self.__humanOverride.Flag)
-        print str(self.__numOfPublishThreads)
         self.__numOfPublishThreads += 1
         rate = rospy.Rate(self.__navigatorParams["PublishRate"])
         while self.__currentMode.upper() == 'PID_ACTIVE' or self.__currentMode.upper() == 'PID_ACTIVE_HOLD_ALT':
-            if not self.__humanOverride.Flag and self.__keepPidRunning:
+            if not self.__humanOverride.Flag and self.__isPidRunning:
                 stime = time.time()
                 try:
                     msg = rospy.wait_for_message('/pid/controller_command',controller_msg)
                     self.PublishRCMessage(msg.x, msg.y, msg.z, msg.t)
                     rate.sleep()
                     etime = time.time()
-                    print("publishing : {0} {1} {2} {3} elapsed:{4}".format(msg.x,msg.y,msg.z,msg.t,etime - stime))
+                    self.__PrintDebugMessage("publishing : {0} {1} {2} {3} elapsed:{4}".format(msg.x,msg.y,msg.z,msg.t,etime - stime))
                 except:
-                    print "ERROR : controller msg from pid topic did not process"
-                    self.__numOfPublishThreads = 0
+                    self.__PrintDebugMessage("ERROR : controller msg from pid topic did not process")
                     break
             else:
-                print "Human override activated, publishing thread stopping..."
-                self.__numOfPublishThreads = 0
+                self.__PrintDebugMessage("Human override activated, publishing thread stopping...")
                 break
+        self.__numOfPublishThreads = 0
         return 1
 
     #SetCurrentMode : set the current mode of flight (navigator/set_mode callback)
@@ -126,9 +122,8 @@ class Navigator:
         elif var == 'STABILIZE':
             self.__setModeMavros(base_mode=0, custom_mode='STABILIZE')
         elif var == 'PID_ACTIVE':
-            self.__setModeMavros(base_mode=0, custom_mode='STABILIZE')
             self.__pidControlService(True)
-            self.__keepPidRunning=True
+            self.__isPidRunning=True
             thread = Thread(target = self.__ConstantRatePublish, args = (int(mode.base_mode), ))
             thread.start()
         elif var == 'PID_ACTIVE_HOLD_ALT':
@@ -136,12 +131,10 @@ class Navigator:
             thread = Thread(target = self.__ConstantRatePublish, args = (int(mode.base_mode), ))
             thread.start()
         elif var == 'PID_STOP':
-            self.__keepPidRunning=False
+            self.__isPidRunning=False
             self.__pidControlService(False)
 
-
-        print "Navigator is changing flight mode"
-        print "mode: " + self.__currentMode.upper()
+        self.__PrintDebugMessage("Navigator is changing flight mode" + '\n' + "mode: " + self.__currentMode.upper())
         return True
 
     #PublishRCMessage : publish new message to rc/override topic to set rc channels
@@ -181,24 +174,28 @@ class Navigator:
         self.__rcOverrideTopic.publish(self.__rcMessage.GetRcMessage())
         self.__isRcReseted = True
 
-
     #IsPublishAllowed : Make all safety checks in this method.
     #return value : True/False according to all safety checks.
     def __IsPublishAllowed(self):
         if self.__humanOverride.Flag or self.__humanOverrideElapsedTime != 0 and \
                 (time.time() - self.__humanOverrideElapsedTime > self.__navigatorParams["HumanOverrideElapsedTimeAllowed"]):
             self.__setModeMavros(base_mode=0, custom_mode=str(self.__humanOverride.ChangeToMode))
-            print "DEBUG: (IsPublishAllowed):Human override channel activated, publish disabled"
-            print("DEBUG: (IsPublishAllowed):Navigator is changing to mode {0}".format(self.__humanOverride.ChangeToMode))
-            #TBD: define logger behavior here
+            self.__PrintDebugMessage("Human override channel activated, publish disabled.")
+            self.__PrintDebugMessage("Navigator is changing to mode {0}.".format(self.__humanOverride.ChangeToMode))
             return False
         else:
-            #self.__IsPublishAllowedBool = True
             return True
+
+    def __PrintDebugMessage(self, msg):
+        class_name = self.__class__.__name__
+        current_frame = inspect.currentframe()
+        func = inspect.getframeinfo(current_frame.f_back).function
+        print str("{0}.{1}():".format(class_name,func))
+        print str(" {0}".format(msg))
 
 if __name__ == '__main__':
     try:
-        rospy.init_node('Navigator', anonymous=True)
+        rospy.init_node('navigator', anonymous=True)
         nav = Navigator()
         #while not rospy.is_shutdown():
             #time.sleep(0)

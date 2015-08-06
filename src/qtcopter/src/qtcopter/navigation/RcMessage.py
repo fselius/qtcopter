@@ -2,6 +2,7 @@
 # Software License Agreement (BSD License)
 
 from mavros.msg import OverrideRCIn
+import inspect
 
 class ChannelName:
     Roll, Pitch, Throttle, Yaw = range(4)
@@ -17,7 +18,6 @@ class RcMessage:
     def __init__(self):
         self.__rcChannels = OverrideRCIn().channels
 
-
     #GetRcMessage : packs a msg object and returns it to caller
     #return value : OverrideRCIn msg with channels set
     def GetRcMessage(self):
@@ -26,7 +26,7 @@ class RcMessage:
         return msg
 
     def ResetRcChannels(self):
-        print "Reseting RC channels input"
+        self.__PrintDebugMessage("Reseting RC channels input")
         for i in range(0,7):
             self.__rcChannels[i] = OverrideRCIn.CHAN_RELEASE
 
@@ -71,6 +71,12 @@ class RcMessage:
     def GetHumanOverride(self):
         return self.__rcChannels[ChannelName.HumanOverrideChannel]
 
+    def __PrintDebugMessage(self, msg):
+        class_name = self.__class__.__name__
+        current_frame = inspect.currentframe()
+        func = inspect.getframeinfo(current_frame.f_back).function
+        print str("{0}.{1}():".format(class_name,func))
+        print str(" {0}".format(msg))
 
 
 
