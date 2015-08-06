@@ -1,0 +1,11 @@
+<launch>
+
+    <!--make sure that all rc channels are streaming data at 25 hz-->
+    <node name="mavsys" cwd="node" pkg="mavros" type="mavsys" required="False" args="rate --rc-channels 25"/>
+
+    <!--navigator module-->
+    <node name="navigator" pkg="qtcopter" type="Navigator.py" cwd="node" output="screen"/>
+    <!--node name="pid_node" pkg="qtcopter" type="PIDNode.py" cwd="node"-->
+
+</launch>
+
