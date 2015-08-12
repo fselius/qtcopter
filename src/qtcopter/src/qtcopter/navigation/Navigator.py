@@ -159,27 +159,28 @@ class Navigator:
             #if rc8 switch in the controller will be turned up -> mode will change to LAND
             if (val < self.__humanOverrideDefault - threshHold):
                 self.__humanOverride.Flag = True
-                self.__AfterHumanOverridePublish()
                 self.__humanOverride.ChangeToMode = self.__navigatorParams["HumanOverrideModeChange"]
+                self.__AfterHumanOverridePublish()
             elif (val > self.__humanOverrideDefault + threshHold):
                 self.__humanOverride.Flag = True
-                self.__AfterHumanOverridePublish()
                 self.__humanOverride.ChangeToMode = 'LAND'
+                self.__AfterHumanOverridePublish()
 
     #Performs as reset to all rc channels to bring control back to the operator
     def __AfterHumanOverridePublish(self):
+        self.__isRcReseted = True
         self.__rcMessage.PrepareForArming() #(pitch,roll,yaw)<-1500, throttle<-1000
         self.__rcOverrideTopic.publish(self.__rcMessage.GetRcMessage())
         self.__rcMessage.ResetRcChannels() #release all channels to allow human full control
         self.__rcOverrideTopic.publish(self.__rcMessage.GetRcMessage())
-        self.__isRcReseted = True
+        self.__setModeMavros(base_mode=0, custom_mode=str(self.__humanOverride.ChangeToMode))
+        self.__PrintDebugMessage("Mode changed to {0}".format(self.__humanOverride.ChangeToMode))
 
     #IsPublishAllowed : Make all safety checks in this method.
     #return value : True/False according to all safety checks.
     def __IsPublishAllowed(self):
         if self.__humanOverride.Flag or self.__humanOverrideElapsedTime != 0 and \
                 (time.time() - self.__humanOverrideElapsedTime > self.__navigatorParams["HumanOverrideElapsedTimeAllowed"]):
-            self.__setModeMavros(base_mode=0, custom_mode=str(self.__humanOverride.ChangeToMode))
             self.__PrintDebugMessage("Human override channel activated, publish disabled.")
             self.__PrintDebugMessage("Navigator is changing to mode {0}.".format(self.__humanOverride.ChangeToMode))
             return False
