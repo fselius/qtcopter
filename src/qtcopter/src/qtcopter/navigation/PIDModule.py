@@ -65,49 +65,7 @@ class PIDController:
         err = self.error
         lastError = self.LastError
 
-        # #if err is less than epsilon, no fix is needed
-        # #the nominal value is returned
-        # #1500 for roll,pitch,yaw and aroun 1300 for throttle
-        # if abs(err)<self.epsilon:
-        #     return self.nValue #maybe need to return here NO_CHANGE from RCMessageOverride constant
 
-        #Error Ranges in meters
-        #Divide err to ranges: Greated than 10, Between 3 and 10, Greater then -10 (error to different
-        #side of the axis) and between -3 and -10
-
-        #if err is greater than 10 meters
-        #Reset the integral component of the PID
-        #fix is maximum available fix as defined in configuration
-        if err > 10:
-            self.integral=0
-            print self.axis, ":error greater than 10, maxlimit set"
-            return self.MaxLimit +self.normalizationFactor
-
-        #if err is between 3 and 10 meters
-        #Reset the integral component of the PID
-        #change state to "Between" fix meaning medimum rate fix
-        if err > 3:
-            self.integral=0
-            print self.axis, ":fix is 1400, error >3 but <10"
-            return 1400
-
-        #if err is greater than -10 meters
-        #Reset the integral component of the PID
-        #fix is minimum available fix as defined in configuration
-        if err < -10:
-            self.integral=0
-            print self.axis, "error greater than -10, MinLimit set"
-            return self.MinLimit+self.normalizationFactor
-
-        #if err is between 3 and 10 meters
-        #Reset the integral component of the PID
-        #change state to "Between" fix meaning medimum rate fix
-        if err < -3:
-            self.integral=0
-            print self.axis, ":fix is 1200, error greater <-3 but >-10"
-            return 1200
-
-        #Error is between -3 and 3
         #Fix is calculated to be err*kp + integral*ki + derivative*kd
         #integral component is bounded in order to prevent windup effect
         #output in bounded in order not to hurt quadcopter
