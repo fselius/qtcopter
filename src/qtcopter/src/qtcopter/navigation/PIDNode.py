@@ -32,7 +32,7 @@ class PIDManager:
     #   /pid_set_axis_gains, type UpdateGainsSrv which get ki,kd,kp,channel which updates the channel gains
     #=================================================
     def __init__(self, dt, normalizationFactor):
-        print "initiatin PIDManager class"
+        rospy.loginfo("initiatin PIDManager class")
         try:
             #Read configuration from config file
             xConfig = config.GetConfigurationSection("X")
@@ -60,7 +60,7 @@ class PIDManager:
             self.PidControlService = rospy.Service('/pid_control', PidControlSrv, self.PIDControlServiceRequestHandler)
             self.UpdateAxisConstantsService = rospy.Service('/pid_set_axis_gains', UpdateGainsSrv, self.UpdateAxisGainsRequestHandler)
         except:
-            print "An error occured initiatin PIDManager class: ", sys.exc_info()[0]
+            rospy.logerr("An error occured initiatin PIDManager class: ", sys.exc_info()[0])
 
     #================================================================
     #DataCollector Callback
@@ -72,7 +72,6 @@ class PIDManager:
         self.AxisControllers["Y"].SetError(msg.y)
         self.AxisControllers["Z"].SetError(msg.z)
         self.AxisControllers["Theta"].SetError(msg.t)
-
     #======================================================================
     #Run method
     #This is the main responsibility of this class
@@ -99,12 +98,12 @@ class PIDManager:
     #and updates IsRunning depended on IsRunning != request.state
     #======================================================================
     def PIDControlServiceRequestHandler(self, req):
-        print "PidControlService request - requested running: ", req.state
+        rospy.loginfo("PidControlService request - requested running: ", req.state)
         if not self.IsRunning == req.state:
             self.IsRunning = req.state
-            print "PID IsRunning set to: ", self.IsRunning
+            rospy.loginfo("PID IsRunning set to: ", self.IsRunning)
         else:
-            print "PID IsRunning state wasn't changed, it was already as requested"
+            rospy.loginfo("PID IsRunning state wasn't changed, it was already as requested")
         return PidControlSrvResponse(self.IsRunning)
 
     #======================================================================
@@ -121,11 +120,11 @@ class PIDManager:
     #======================================================================
     def UpdateAxisGainsRequestHandler(self, req):
         if req.channel != 'X' and req.channel != 'Y' and req.channel != 'Z' and req.channel != 'Theta':
-            print "Invalid channel name was provided"
+            rospy.logerr("Invalid channel name was provided")
             return UpdateGainsSrvResponse(False)
         try:
-            print "UpdateAxisGains request for: ",req.channel
-            print "New values are (Kp,Kd,Ki): ",req.kp,req.kd,req.ki
+            rospy.loginfo("UpdateAxisGains request for: ",req.channel)
+            rospy.loginfo("New values are (Kp,Kd,Ki): ",req.kp,req.kd,req.ki)
             minLimit = self.AxisControllers[req.channel].MinLimit
             maxLimit = self.AxisControllers[req.channel].MaxLimit
             nValue = self.AxisControllers[req.channel].nValue
@@ -137,7 +136,7 @@ class PIDManager:
             self.IsRunning = isRunning
             return UpdateGainsSrvResponse(True)
         except:
-            print "There was an error", sys.exc_info()[0]
+            rospy.logerr("There was an error", sys.exc_info()[0])
             return UpdateGainsSrvResponse(False)
 
 #======================================================================
@@ -150,10 +149,10 @@ class PIDManager:
 if __name__ == '__main__':
     try:
         rospy.init_node('pid_node')
-        print "Started PID node"
+        rospy.loginfo("Started PID node")
         generalConfig = config.GetConfigurationSection("General")
         pidManager = PIDManager(generalConfig["Rate"], generalConfig["NormalizationFactor"])
-        print "Created all channels PID controllers"
+        rospy.loginfo("Created all channels PID controllers")
         rate = rospy.Rate((int)(generalConfig["Rate"]))
         while not rospy.is_shutdown():
             pidManager.Run()

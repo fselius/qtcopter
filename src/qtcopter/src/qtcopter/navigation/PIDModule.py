@@ -2,7 +2,7 @@
 # Software License Agreement (BSD License)
 
 # import time
-# import rospy
+import rospy
 
 #===========================================================================================
 #PIDController class
@@ -43,7 +43,7 @@ class PIDController:
 
         #axis name
         self.axis = axis
-        print("Started PIDController with %s %s %s %s" %(kp,kd,ki,dt))
+        rospy.loginfo("Started PIDController with %s %s %s %s" %(kp,kd,ki,dt))
 
     #======================================================================
     #SetError method
@@ -81,6 +81,6 @@ class PIDController:
         elif output < self.MinLimit:
             output = self.MinLimit
         output = output+self.normalizationFactor
-        print self.axis, ":Error %s, Proportinal %s, Integral %s, Derivative %s, Fix %s" %(err, err*self.kp, self.integral, derivative, output)
+        rospy.loginfo(self.axis, ":Error %s, Proportinal %s, Integral %s, Derivative %s, Fix %s" %(err, err*self.kp, self.integral, derivative, output))
         return output
 
