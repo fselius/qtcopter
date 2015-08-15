@@ -3,6 +3,7 @@
 
 from mavros.msg import OverrideRCIn
 import inspect
+import rospy
 
 class ChannelName:
     Roll, Pitch, Throttle, Yaw = range(4)
@@ -26,7 +27,7 @@ class RcMessage:
         return msg
 
     def ResetRcChannels(self):
-        self.__PrintDebugMessage("Reseting RC channels input")
+        rospy.loginfo("Reseting RC channels input")
         for i in range(0,7):
             self.__rcChannels[i] = OverrideRCIn.CHAN_RELEASE
 
@@ -70,13 +71,6 @@ class RcMessage:
 
     def GetHumanOverride(self):
         return self.__rcChannels[ChannelName.HumanOverrideChannel]
-
-    def __PrintDebugMessage(self, msg):
-        class_name = self.__class__.__name__
-        current_frame = inspect.currentframe()
-        func = inspect.getframeinfo(current_frame.f_back).function
-        print str("{0}.{1}():".format(class_name,func))
-        print str(" {0}".format(msg))
 
 
 

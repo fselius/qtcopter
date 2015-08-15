@@ -5,7 +5,7 @@
 
     <!--navigator module-->
     <node name="navigator" pkg="qtcopter" type="Navigator.py" cwd="node" output="screen"/>
-    <!--node name="pid_node" pkg="qtcopter" type="PIDNode.py" cwd="node"-->
+    <node name="pid_node" pkg="qtcopter" type="PIDNode.py" cwd="node" />
 
 </launch>
 
