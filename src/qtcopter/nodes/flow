@@ -3,6 +3,7 @@
 import rospy
 from mavros_extras.msg import OpticalFlowRad
 from qtcopter.msg import controller_msg
+from qtcopter.srv import UpdateWaypointsSrv
 from sensor_msgs.msg import Range
 
 import tf
@@ -13,6 +14,7 @@ class FlowHandler:
     def __init__(self):
         self._listener = tf.TransformListener()
         self._publisher = tf.TransformBroadcaster()
+        self._flowUpdateWayPointsSrv = rospy.Service('/flow/update_waypoints', UpdateWaypointsSrv, self._UpdateWaypointsRequestHandler)
         tr = tf.Transformer()
         # TODO: make a frame for the flow
         self._flow_frame = 'downward_cam_optical_frame'
@@ -66,6 +68,20 @@ class FlowHandler:
                 break
             rospy.loginfo('Published initial flow delta after {0} seconds'.format(time()-start))
 
+    #UpdateWaypointsRequestHandler : handler function for setting new waypoints to upon service call.
+    #param : request - holds x y z t values.
+    def _UpdateWaypointsRequestHandler(self, request):
+        try:
+            rot = tf.transformations.quaternion_from_euler(0, 0, request.t)
+            self._publisher.sendTransform((request.x, request.y, request.z),
+                                          rot,
+                                          rospy.Time.now(),
+                                          'waypoint',
+                                          self._flow_frame)
+        except:
+            rospy.logerr("An error occured while trying to set new waypoints")
+        return True
+
     def handle_optical_flow_rad(self, data):
         if data.quality == 0:
             if self.last_quality_warn+1 < time():
@@ -115,8 +131,8 @@ class FlowHandler:
         # publish to PID
         # TODO: Update theta from compass!
         msg = controller_msg()
-        msg.x = x
-        msg.y = y
+        msg.x = -y
+        msg.y = -x
         msg.z = z
         msg.t = theta
         self.__pid_input_pub.publish(msg)
