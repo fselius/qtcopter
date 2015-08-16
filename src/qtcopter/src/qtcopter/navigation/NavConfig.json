@@ -14,6 +14,8 @@
         "Boolean":true
     },
     "params":{
+      "SetServoChannel":1,
+      "SetServoValue":1300,
       "HumanOverrideChannel":7,
       "HumanOverrideDefault":1800,
       "HumanOverrideThreshold":100,

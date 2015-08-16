@@ -4,13 +4,13 @@
 import time
 import rospy
 from mavros.msg import OverrideRCIn, RCIn
-from mavros.srv import SetMode, StreamRate, CommandBool, StreamRateRequest
+from mavros.srv import SetMode, CommandBool, CommandInt, CommandLongRequest, CommandLong
 from threading import Thread
 from RcMessage import RcMessage
 from Configuration import Configuration
 from qtcopter.msg import controller_msg
 from qtcopter.srv import *
-import inspect
+from mavros.msg import Mavlink
 
 config = Configuration("NavConfig.json")
 
@@ -40,6 +40,7 @@ class Navigator:
         self.__setModeService = rospy.Service('navigator/set_mode', NavigatorModeSrv, self.__SetCurrentMode)
         self.__armingService = rospy.ServiceProxy('/mavros/cmd/arming', CommandBool)
         self.__setModeMavros = rospy.ServiceProxy('/mavros/set_mode',SetMode)
+        self.__setServoService = rospy.ServiceProxy('/mavros/cmd/command', CommandLong)
         self.__pidControlService = rospy.ServiceProxy('/pid_control', PidControlSrv)
         self.__rcOverrideTopic = rospy.Publisher('/mavros/rc/override',OverrideRCIn,queue_size = 10) #TBD : how to determine queue size
         self.__rcInListener = rospy.Subscriber('/mavros/rc/in',RCIn,self.__HumanOverrideCallback)
@@ -109,6 +110,11 @@ class Navigator:
         if var == 'ARM':
             self.__setModeMavros(base_mode=0, custom_mode='STABILIZE')
             self.Arm(True)
+        elif var == 'SET_SERVO':
+            channel = self.__navigatorParams["SetServoChannel"]
+            value = self.__navigatorParams["SetServoValue"]
+            self.__setServoService = rospy.ServiceProxy('/mavros/cmd/command', CommandLong)
+            self.__setServoService(command=CommandLongRequest.CMD_DO_SET_SERVO, param1=channel, param2=value)
         elif var == 'DISARM':
             self.__setModeMavros(base_mode=0, custom_mode='STABILIZE')
             self.Arm(False)
@@ -135,7 +141,7 @@ class Navigator:
             self.__pidControlService(False)
 
         rospy.loginfo("Navigator is changing flight mode | mode: " + self.__currentMode.upper())
-        return true
+        return True
 
     #PublishRCMessage : publish new message to rc/override topic to set rc channels
     #params : roll, pitch, throttle, yaw as integer values between 1000 to 2000
