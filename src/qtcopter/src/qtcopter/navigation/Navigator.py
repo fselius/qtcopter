@@ -2,9 +2,10 @@
 # Software License Agreement (BSD License)
 
 import time
-import rospy
+import rospy, mavros
+from mavros import command
 from mavros.msg import OverrideRCIn, RCIn
-from mavros.srv import SetMode, CommandBool, CommandInt, CommandLongRequest, CommandLong
+from mavros.srv import SetMode, CommandBool, CommandLongRequest, CommandLong
 from threading import Thread
 from RcMessage import RcMessage
 from Configuration import Configuration
@@ -110,11 +111,20 @@ class Navigator:
         if var == 'ARM':
             self.__setModeMavros(base_mode=0, custom_mode='STABILIZE')
             self.Arm(True)
-        elif var == 'SET_SERVO':
-            channel = self.__navigatorParams["SetServoChannel"]
-            value = self.__navigatorParams["SetServoValue"]
-            self.__setServoService = rospy.ServiceProxy('/mavros/cmd/command', CommandLong)
-            self.__setServoService(command=CommandLongRequest.CMD_DO_SET_SERVO, param1=channel, param2=value)
+        elif var == 'BALL_DROP':
+            #channel = self.__navigatorParams["BallDropChannel"]
+            #value = self.__navigatorParams["BallDropValue"]
+            command.long(command=CommandLongRequest.CMD_DO_SET_SERVO, param1=1, param2=1800)
+            self.__setServoService(command)
+        elif var == 'BALL_STOP':
+            command.long(command=CommandLongRequest.CMD_DO_SET_SERVO, param1=1, param2=1500)
+            self.__setServoService(command)
+        elif var == 'CAMERA_UP':
+            command.long(command=CommandLongRequest.CMD_DO_SET_SERVO, param1=2, param2=1800)
+            self.__setServoService(command)
+        elif var == 'CAMERA_DOWN':
+            command.long(command=CommandLongRequest.CMD_DO_SET_SERVO, param1=2, param2=2000)
+            self.__setServoService(command)
         elif var == 'DISARM':
             self.__setModeMavros(base_mode=0, custom_mode='STABILIZE')
             self.Arm(False)
@@ -195,6 +205,7 @@ class Navigator:
 
 if __name__ == '__main__':
     try:
+        mavros.set_namespace('/mavros')
         rospy.init_node('navigator', anonymous=True)
         nav = Navigator()
         #while not rospy.is_shutdown():
