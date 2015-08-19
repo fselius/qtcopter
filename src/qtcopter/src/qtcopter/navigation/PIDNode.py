@@ -181,11 +181,6 @@ class PIDManager:
                 "Z": zCtrl,
                 "Theta": tCtrl
                 }
-            if req.resetIntegral:
-                self.AxisControllers['X'].ResetIntegral()
-                self.AxisControllers['Y'].ResetIntegral()
-                self.AxisControllers['Z'].ResetIntegral()
-                self.AxisControllers['Theta'].ResetIntegral()
 
             self.IsRunning = isRunning
             rospy.logerr("New gains were set")
