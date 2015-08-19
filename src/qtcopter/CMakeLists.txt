@@ -58,6 +58,7 @@ catkin_python_setup()
    FILES
    PidControlSrv.srv
    UpdateGainsSrv.srv
+   AllGainsSrv.srv
  )
 
 ## Generate actions in the 'action' folder
