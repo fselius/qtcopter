@@ -58,6 +58,9 @@ catkin_python_setup()
    FILES
    PidControlSrv.srv
    UpdateGainsSrv.srv
+   FlowStateSrv.srv
+   NavigatorModeSrv.srv
+   UpdateWaypointsSrv.srv
  )
 
 ## Generate actions in the 'action' folder
