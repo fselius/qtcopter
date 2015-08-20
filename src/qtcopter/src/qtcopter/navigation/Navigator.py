@@ -114,17 +114,17 @@ class Navigator:
         elif var == 'BALL_DROP':
             #channel = self.__navigatorParams["BallDropChannel"]
             #value = self.__navigatorParams["BallDropValue"]
-            command.long(command=CommandLongRequest.CMD_DO_SET_SERVO, param1=1, param2=1800)
-            self.__setServoService(command)
+            #command.long(command=CommandLongRequest.CMD_DO_SET_SERVO, param1=1, param2=1800)
+            self.__setServoService(command=CommandLongRequest.CMD_DO_SET_SERVO, param1=1, param2=1800)
         elif var == 'BALL_STOP':
-            command.long(command=CommandLongRequest.CMD_DO_SET_SERVO, param1=1, param2=1500)
-            self.__setServoService(command)
+            #command.long(command=CommandLongRequest.CMD_DO_SET_SERVO, param1=1, param2=1500)
+            self.__setServoService(command=CommandLongRequest.CMD_DO_SET_SERVO, param1=1, param2=1500)
         elif var == 'CAMERA_UP':
-            command.long(command=CommandLongRequest.CMD_DO_SET_SERVO, param1=2, param2=1800)
-            self.__setServoService(command)
+            #command.long(command=CommandLongRequest.CMD_DO_SET_SERVO, param1=2, param2=1800)
+            self.__setServoService(command=CommandLongRequest.CMD_DO_SET_SERVO, param1=2, param2=1800)
         elif var == 'CAMERA_DOWN':
-            command.long(command=CommandLongRequest.CMD_DO_SET_SERVO, param1=2, param2=2000)
-            self.__setServoService(command)
+            #command.long(command=CommandLongRequest.CMD_DO_SET_SERVO, param1=2, param2=2000)
+            self.__setServoService(command=CommandLongRequest.CMD_DO_SET_SERVO, param1=2, param2=2000)
         elif var == 'DISARM':
             self.__setModeMavros(base_mode=0, custom_mode='STABILIZE')
             self.Arm(False)
