@@ -55,6 +55,17 @@ class PIDController:
         self.error = error
 
     #======================================================================
+    #ResetIntegral method
+    #Resets the integral accumulator and sets errors counters to zero
+    #Used after aerial switching of PID gains
+    #======================================================================
+    def ResetIntegral(self):
+        self.integral = 0
+        self.LastError = 0
+        self.error = 0
+        print "Resetting integral for channel: ", self.axis
+
+    #======================================================================
     #GetFix method
     #Main logic of class, used to calculate the needed fix based on:
     #   error, lastError, gains, integral, derivative and linear fix

@@ -59,8 +59,9 @@ class PIDManager:
             self.PidOutputTopic = rospy.Publisher('/pid/controller_command', controller_msg,queue_size=1)
             self.PidControlService = rospy.Service('/pid_control', PidControlSrv, self.PIDControlServiceRequestHandler)
             self.UpdateAxisConstantsService = rospy.Service('/pid_set_axis_gains', UpdateGainsSrv, self.UpdateAxisGainsRequestHandler)
+            self.UpdateAllAxisGainsService = rospy.Service('/pid_set_all_gains', AllGainsSrv, self.SetAllGainsHandler)
         except:
-            rospy.logerr("An error occured initiatin PIDManager class: ", sys.exc_info()[0])
+            rospy.logerr("An error occured initiatin PIDManager class: ", sys.exc_info())
 
     #================================================================
     #DataCollector Callback
@@ -138,6 +139,55 @@ class PIDManager:
         except:
             rospy.logerr("There was an error", sys.exc_info()[0])
             return UpdateGainsSrvResponse(False)
+
+    #======================================================================
+    #SetAllGainsHandler
+    #Service handler for updating gains on all channels
+    #and allow resetting the integral part of all channels
+    #======================================================================
+    def SetAllGainsHandler(self, req):
+        rospy.logerr("Set all gains request received")
+        #X gains
+        minLimit = self.AxisControllers['X'].MinLimit
+        maxLimit = self.AxisControllers['X'].MaxLimit
+        nValue = self.AxisControllers['X'].nValue
+        xCtrl = PIDController(req.xkp, req.xkd, req.xki,self.dt,minLimit,maxLimit, nValue,self.normalizationFactor, 'X')
+
+        #Y gains
+        minLimit = self.AxisControllers['Y'].MinLimit
+        maxLimit = self.AxisControllers['Y'].MaxLimit
+        nValue = self.AxisControllers['Y'].nValue
+        yCtrl = PIDController(req.ykp, req.ykd, req.yki,self.dt,minLimit,maxLimit, nValue,self.normalizationFactor, 'Y')
+
+        #Z gains
+        minLimit = self.AxisControllers['Z'].MinLimit
+        maxLimit = self.AxisControllers['Z'].MaxLimit
+        nValue = self.AxisControllers['Z'].nValue
+        zCtrl = PIDController(req.zkp, req.zkd, req.zki,self.dt,minLimit,maxLimit, nValue,self.normalizationFactor, 'Z')
+
+        #Theta gains
+        minLimit = self.AxisControllers['Theta'].MinLimit
+        maxLimit = self.AxisControllers['Theta'].MaxLimit
+        nValue = self.AxisControllers['Theta'].nValue
+        tCtrl = PIDController(req.tkp, req.tkd, req.tki,self.dt,minLimit,maxLimit, nValue,self.normalizationFactor, 'Theta')
+        try:
+            #Replace controllers
+            isRunning = self.IsRunning
+            if isRunning:
+                self.IsRunning = False
+            self.AxisControllers = {
+                "X": xCtrl,
+                "Y": yCtrl,
+                "Z": zCtrl,
+                "Theta": tCtrl
+                }
+
+            self.IsRunning = isRunning
+            rospy.logerr("New gains were set")
+            return AllGainsSrvResponse(True)
+        except:
+            rospy.logerr("There was an error", sys.exc_info()[0])
+            return AllGainsSrvResponse(False)
 
 #======================================================================
 #Main routine

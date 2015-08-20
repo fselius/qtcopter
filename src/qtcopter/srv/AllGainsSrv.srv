@@ -1,0 +1,15 @@
+uint32 xkp
+uint32 xkd
+uint32 xki
+uint32 ykp
+uint32 ykd
+uint32 yki
+uint32 zkp
+uint32 zkd
+uint32 zki
+uint32 tkp
+uint32 tkd
+uint32 tki
+bool resetIntegral
+---
+bool result
