@@ -11,12 +11,12 @@
   </include>
 
   <!-- Drone camera -->
-  <include file="$(find qtcopter)/launch/ptgrey.launch">
+  <include file="$(find qtcopter)/launch/myptgrey.launch">
     <arg name="lense" value="$(arg lense)" />
     <arg name="camera_serial" value="$(arg camera_serial)" />
   </include>
 
   <!-- Navigation and quadcopter nodes and configuration -->
-  <include file="$(find qtcopter)/launch/navigator.launch">
+  <include file="$(find qtcopter)/launch/flow.launch">
   </include>
 </launch>

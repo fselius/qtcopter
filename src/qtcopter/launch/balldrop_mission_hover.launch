@@ -32,6 +32,6 @@
     threshold: 100
   </rosparam>
   <rosparam ns="cv">
-    fps: 0.5
+    hz: 18
   </rosparam>
 </launch>

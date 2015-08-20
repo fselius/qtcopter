@@ -1,155 +1,99 @@
 #!/usr/bin/env python2
 
+import time
+import yaml
+
 import rospy
-from mavros_extras.msg import OpticalFlowRad
-from qtcopter.msg import controller_msg
-import tf
-from time import time, sleep
-from ptgrey import PTGreyCamera
+from qtcopter.ptgrey import PTGreyCamera
+import flycapture2 as fc2
+from sensor_msgs.msg import CameraInfo, Image
 
-class FlowHandler:
-    " Handle flow (px4flow OPTICAL_FLOW_RAD) messages to update location "
+from cv_bridge import CvBridge, CvBridgeError
+import camera_info_manager as cim
+
+class PTGreyNode:
     def __init__(self):
-        self._listener = tf.TransformListener()
-        self._publisher = tf.TransformBroadcaster()
-        tr = tf.Transformer()
-        # TODO: make a frame for the flow
-        self._flow_frame = 'downward_cam_optical_frame'
-        self.__pid_input_pub = rospy.Publisher('/pid_input', controller_msg,
-                                               queue_size=1)
-        self.last_good = 0
-        self.last_quality_warn = 0
-        self.allow_zero_quality = rospy.get_param('px4flow/allow_zero_quality', False)
-        self.previous_height = None
+        rospy.init_node('myptgrey')
 
-        # check if we already have transformation (if flow node restarted)
-        try:
-            ((x, y, z), rot) = self._listener.lookupTransform(self._flow_frame, 'waypoint', rospy.Time(0))
-        except tf.LookupException:
-            # no waypoint available
-            init_waypoint = True
+        # publishing stuff
+        self.__image_pub = rospy.Publisher("image_color", Image, queue_size=1)
+        self.__info_pub = rospy.Publisher("/camera/camera_info", CameraInfo, queue_size=1)
+        self.__bridge = CvBridge()
+
+        # camera info
+        self.info_url = rospy.get_param('/camera/info_url')
+        self.name = rospy.get_param('/camera/name')
+        #self.lense = rospy.get_param('lense')
+        #self.serial = rospy.get_param('camera_serial')
+        self.__info_msg = self._load_camera_info(self.info_url, self.name)
+
+        m = self.__info_msg
+        #m.header.frame_id = 'camera'
+        m.binning_x = 1
+        m.binning_y = 1
+        m.roi.x_offset = 0
+        m.roi.y_offset = 0
+        m.roi.height = 0
+        m.roi.width = 0
+        m.roi.do_rectify = True
+
+
+
+        c = PTGreyCamera()
+        self.__cam = c
+
+        if rospy.get_param('myptgrey/auto_exposure'):
+            c.set_property_auto(fc2.AUTO_EXPOSURE)
         else:
-            init_waypoint = False
-            theta = tf.transformations.euler_from_quaternion(rot)[2]
-            rospy.loginfo('Flow init: Using previous flow delta: x {0}, y {1}, z {2}, theta {3}'.format(
-                            x, y, z, theta))
+            c.set_property_manual(fc2.AUTO_EXPOSURE, rospy.get_param('myptgrey/exposure'))
 
-        if init_waypoint:
-            # set initial deltas to 0 (until we get something from CV)
-            x, y, z, theta = 0, 0, 0, 0
-            rot =  tf.transformations.quaternion_from_euler(0, 0, theta)
-            rospy.loginfo('Flow init: Publishing initial flow delta: x {0}, y {1}, z {2}, theta {3}'.format(
-                                            x, y, z, theta))
-            # for some reason, sendTransform() immediately on start / broadcaster creation
-            # will occasionally fail. it will work after about 100ms.
-            delay = 0.1 # seconds to wait between tries
-            max_init_time = 3 # seconds after which we fail
-            start = time()
-            while True:
-                self._publisher.sendTransform((x, y, z),
-                                          rot,
-                                          rospy.Time.now(),
-                                          'waypoint',
-                                          self._flow_frame)
-                try:
-                    self._listener.waitForTransform(self._flow_frame, 'waypoint', rospy.Time(0), rospy.Duration(delay))
-                except tf.Exception:
-                    # transform is probably still not available. try again :(
-                    if time()-start > max_init_time:
-                        # we tried for more than 3 seconds. abort
-                        rospy.logerr('FAILED publishing initial flow delta.')
-                        raise
-                    continue
-                # ok :) we got a transform!
-                break
-            rospy.loginfo('Published initial flow delta after {0} seconds'.format(time()-start))
-
-    def handle_optical_flow_rad(self, data):
-        if data.quality == 0:
-            if self.last_quality_warn+1 < time():
-                # only print warning every second
-                self.last_quality_warn = time()
-                rospy.logwarn('Flow quality = 0 for %d seconds' % (time()-self.last_good))
-            if not self.allow_zero_quality:
-                return
+        if rospy.get_param('myptgrey/auto_shutter'):
+            c.set_property_auto(fc2.SHUTTER)
         else:
-            self.last_good = time()
+            c.set_property_manual(fc2.SHUTTER, rospy.get_param('myptgrey/shutter_speed')*1000)
 
-        # TODO/FIXME/BUG: We have a race condition here that we must fix.
-        # If a new transform to the waypoint is submitted after we sampled it,
-        # and before we added the delta to it, we will overwrite the new value
-        # with the previous one (+delta). This is bad.
-        # get latest (current) transformation
-        try:
-            ((x, y, z), rot) = self._listener.lookupTransform(self._flow_frame,
-                                                            'waypoint',
-                                                            rospy.Time(0))
-        except (tf.LookupException, tf.ConnectivityException, tf.ExtrapolationException), e:
-            rospy.logwarn('Exception in handle_optical_flow_rad:lookupTransform(\'waypoint\'):')
-            rospy.logwarn(str(e))
-            return
+        if rospy.get_param('myptgrey/auto_gain'):
+            c.set_property_auto(fc2.GAIN)
+        else:
+            c.set_property_manual(fc2.GAIN, rospy.get_param('myptgrey/gain'))
 
-        # calculate flow addition
-        dx = data.integrated_x*data.distance
-        dy = data.integrated_y*data.distance
-        if self.previous_height is None:
-            self.previous_height = data.distance
-        
-        dz = data.distance - self.previous_height
-        self.previous_height = data.distance
-        print 'dz:', dz
-        z += dz
-        x += dx
-        y += dy
+        c.set_property_manual(fc2.FRAME_RATE, rospy.get_param('myptgrey/frame_rate'))
 
-        # publish (x+dx, y+dy, z+dz)
-        theta = tf.transformations.euler_from_quaternion(rot)[2]
-        rospy.loginfo('Publish flow delta: x {0}, y {1}, z {2}, theta {3}'.format(
-                                        x, y, z, theta))
-        self._publisher.sendTransform((x, y, z),
-                                      rot,
-                                      rospy.Time.now(),
-                                      'waypoint',
-                                      self._flow_frame)
-        # publish to PID
-        # TODO: Update theta from compass!
-        msg = controller_msg()
-        msg.x = x
-        msg.y = y
-        msg.z = z
-        msg.t = theta
-        self.__pid_input_pub.publish(msg)
+        c.print_infos()
 
-        # TODO: we can calculate heading direction from dx/dy.
-        if data.integration_time_us != 0:
-            # speed
-            speed_x = data.integrated_x/(1.0*data.integration_time_us/1e6)*data.distance
-            speed_y = data.integrated_y/(1.0*data.integration_time_us/1e6)*data.distance
-            
-            # time of data capture
-            capture_time = data.header.stamp.secs + data.header.stamp.nsecs/1e9
+        c.start_capture()
+    def __del__(self):
+        self.__cam.stop_capture()
+
+    def publish_img(self):
+        img = self.__cam.get_frame()
+        msg = self.__bridge.cv2_to_imgmsg(img, "bgr8")
+        # TODO: modify msg to have correct time stamp
+        msg.header.stamp = rospy.Time.now()
+        self.__image_pub.publish(msg)
+    def publish_info(self):
+        msg = self.__info_msg
+        msg.header.stamp = rospy.Time.now()
+        self.__info_pub.publish(msg)
+    @staticmethod
+    def _load_camera_info(url, camera_name):
+        if not url.lower().startswith('file://'):
+            raise NotImplemented("only urls of type file:// are implemented")
+        url = url[7:]
+        # frame_id = camera name from file
+        info = cim.loadCalibrationFile(url, camera_name)
+        info.header.frame_id = yaml.load(open(url, 'r').read())['camera_name']
+
+        return info
+
+
 
 if __name__ == '__main__':
-    rospy.init_node('myptgrey')
-    rospy.Subscriber("/px4flow/px4flow/raw/optical_flow_rad", OpticalFlowRad, flow.handle_optical_flow_rad)
-
-    gain = 0
-
-    c = PTGreyCamera()
-    # set manual values
-    c.set_property_manual(fc2.AUTO_EXPOSURE, 0) # exposure = 0, we don't modify this. I'm not sure, but it had no effect.
-    c.set_property_manual(fc2.SHUTTER, args.shutter) # 10ms shutter (1/100, hopefully fast enough)
-    # if frame_rate is too high, it is set to maximum :)
-    c.set_property_manual(fc2.FRAME_RATE, rospy.get_param('camera/gain', False)) # maximum framerate
-    c.set_property_manual(fc2.GAIN, args.gain)
-    c.print_infos()
-
-    c.start_capture()
-    finder = RANSACFind(True, 3, debug=args.debug)
-
-    try:
-        while True:
-            img = c.get_frame()
-
-    rospy.spin()
+    node = PTGreyNode()
+    rate = rospy.get_param('/cv/hz')
+    rate = rospy.Rate(rate)
+    while not rospy.is_shutdown():
+        node.publish_info()
+        node.publish_img()
+        rate.sleep()
 

@@ -17,6 +17,6 @@
   </include>
 
   <!-- Navigation and quadcopter nodes and configuration -->
-  <include file="$(find qtcopter)/launch/navigator.launch">
+  <include file="$(find qtcopter)/launch/flow.launch">
   </include>
 </launch>

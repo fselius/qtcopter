@@ -2,6 +2,7 @@ import rospy
 from .pub_helpers import draw_roi, draw_rois
 from math import sin, cos, pi
 
+import tf
 
 class SpiralSearch:
     """
@@ -18,6 +19,9 @@ class SpiralSearch:
 
         self.__spiral_factor = spiral_factor
         self.__spiral_time = spiral_time
+
+        self.__listener = tf.TransformListener()
+        self.__flow_frame = 'downward_cam_optical_frame'
 
     def __call__(self, userdata, output):
         rospy.loginfo('Finding coarse ROIs in image, height = {0}.'
@@ -67,25 +71,47 @@ class SpiralSearch:
 
     def publish_spiral(self, userdata, output):
         if 't' in userdata:
+            # TODO: rather than do delta summary, we can let flow calculate how
+            # much we passed since the beginning, then compare the position at
+            # start of SpiralSearch to current position.
+
             output.t = userdata.t
-            dx, dy = userdata.optical_flow.get_movement(userdata.image)
+            #dx, dy = userdata.optical_flow.get_movement(userdata.image)
+
+            # dx, dy, dz = delta to destination
+            ((dx, dy, dz), drot) = self.__listener.lookupTransform(self.__flow_frame, 'waypoint', rospy.Time(0))
+
+            # previous t, x, y
+            t = userdata.t_prev
+            a = self.__spiral_factor
+            x = a*t*cos(t*2.0*pi)
+            y = a*t*sin(t*2.0*pi)
+
+            # dx, dy = how much we passed since last heading change = (how much
+            # we wanted to go - how much we have left to go)
+            dx = (x - userdata.dx) - dx
+            dy = (y - userdata.dy) - dy
+
+            # our location relative to start position
             output.dx = userdata.dx + dx
             output.dy = userdata.dy + dy
         else:
             rospy.loginfo('Start spiraling.')
-            output.t = rospy.Time.now()
+            output.t = rospy.Time.now() # start time
             # Initialize optical flow.
-            userdata.optical_flow.get_movement(userdata.image)
+            #userdata.optical_flow.get_movement(userdata.image)
+            # dx, dy = position relative to start
             output.dx = 0
             output.dy = 0
 
         t = (rospy.Time.now() - output.t).to_sec()/self.__spiral_time
+        output.t_prev = t
         a = self.__spiral_factor
         x = a*t*cos(t*2.0*pi)
         y = a*t*sin(t*2.0*pi)
 
-        dx, dy = userdata.camera.get_ground_offset((output.dx, output.dy),
-                                                   userdata.height_msg.range)
+        #dx, dy = userdata.camera.get_ground_offset((output.dx, output.dy),
+        #                                           userdata.height_msg.range)
 
         userdata.publish_delta__keep_height(x=x-output.dx,
                                             y=y-output.dy,

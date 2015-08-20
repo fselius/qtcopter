@@ -5,11 +5,6 @@ from time import time
 from math import ceil, floor
 import argparse
 
-from polarity_find import PolarityFind
-#sys.path.append('..')
-#from DistanceFind import DistanceFind
-
-
 import flycapture2 as fc2
 import numpy as np
 import cv2

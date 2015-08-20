@@ -33,6 +33,6 @@
   </rosparam>
   <rosparam ns="cv">
     <!-- how frequent should CV run -->
-    fps: 0.5
+    hz: 18
   </rosparam>
 </launch>
