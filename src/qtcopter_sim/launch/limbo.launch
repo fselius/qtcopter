@@ -1,0 +1,25 @@
+<launch>
+  <arg name="use_ptgrey" default="false" />
+  <arg name="camera" unless="$(arg use_ptgrey)" />
+  <arg name="lense" if="$(arg use_ptgrey)" />
+  <arg name="camera_serial" if="$(arg use_ptgrey)" />
+
+  <!-- General configuration -->
+  <include file="$(find qtcopter)/launch/config.launch" />
+
+  <!-- Mission node and configuration -->
+  <include file="$(find qtcopter)/launch/limbo_mission.launch">
+  </include>
+
+  <!-- Simulated camera(s) -->
+  <include file="$(find qtcopter_sim)/launch/camera.launch">
+    <arg name="use_ptgrey" value="$(arg use_ptgrey)" />
+    <arg name="camera" value="$(arg camera)" unless="$(arg use_ptgrey)" />
+    <arg name="lense" value="$(arg lense)" if="$(arg use_ptgrey)" />
+    <arg name="camera_serial" value="$(arg camera_serial)" if="$(arg use_ptgrey)" />
+  </include>
+
+  <!-- Simulated navigation and quadcopter nodes and configuration -->
+  <include file="$(find qtcopter_sim)/launch/navigation.launch">
+  </include>
+</launch>
