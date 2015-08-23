@@ -1,27 +1,43 @@
 #!/usr/bin/env python2
 
-"""
-ROS node for QR scan mission.
-"""
-
-from qtcopter.missions import DistanceFind
-from qtcopter.missions.balldrop.hist_find import HistogramFind
-from qtcopter.missions.qr.qrcode_scan import QRCodeScanner
-from qtcopter.missions import DetailFindMission
+from qtcopter import RosStateMachine as StateMachine
+from qtcopter import FlyToMission, FlyToBase
+from qtcopter import SpiralSearch, CenterAbove
 import rospy
 
 if __name__ == '__main__':
-    coarse_alg = rospy.get_param('target/coarse_algorithm')
-    if coarse_alg == 'distance':
-        coarse_finder = DistanceFind(rospy.get_param('target/color/lower_bound'),
-                                     rospy.get_param('target/color/upper_bound'))
-        coarse_find = coarse_finder.find_roi_contours
-    elif coarse_alg == 'histogram':
-        coarse_finder = HistogramFind()
-        coarse_find = coarse_finder.find_roi_contours
-    else:
-        coarse_find = None
-    scanner = QRCodeScanner()
-    mission = DetailFindMission('qr_mission', coarse_find,
-                                scanner.find_qrs)
-    mission.execute()
+    rospy.init_node('qr_mission')
+
+    #mission_position = rospy.get_param('mission_site/offset')
+    mission_position = None
+
+    sm = StateMachine(states={
+                          'Fly to mission site': FlyToMission(mission_position),
+                          'Spiral search for target': SpiralSearch(coarse_finder.find_roi_rects,
+                                                                   detailed_finder.find_pole,
+                                                                   spiral_time=rospy.get_param('config/spiral/spiral_time'),
+                                                                   spiral_factor=rospy.get_param('config/spiral/spiral_factor')),
+                          # Fly above pole that has QR codes attached
+                          'Center above target': CenterAbove(detailed_finder.find_pole),
+                          'Flip camera forward': FlipCamera(),
+                          # Descend, circling around and facing towards pole, keeping some radius from it by flow sensor info
+                          'Circle descend': CircleDescend(qr_scanner.scan_code,
+                                                          radius=rospy.get_param('config/circle/circle_radius')),
+                          'Fly back to base': FlyToBase(),
+                      },
+                      transitions={
+                          'on way to mission site': 'Fly to mission site',
+                          'mission site reached': 'Spiral search for target',
+                          'continue spiraling': 'Spiral search for target',
+                          'found target': 'Center above target',
+                          'moving above target': 'Center above target',
+                          'target lost': 'Spiral search for target',
+                          'centered above target': 'Flip camera forward',
+                          'flipped camera forward': 'Circle descend',
+                          'qr code 1 scanned': 'Circle descend',
+                          'qr code 2 scanned': 'Fly back to base',
+                          'on way to base': 'Fly back to base',
+                      },
+                      start='Fly to mission site',
+                      outcomes='base reached')
+    sm.execute()
