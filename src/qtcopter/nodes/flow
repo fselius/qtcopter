@@ -2,6 +2,7 @@
 
 import rospy
 from mavros_extras.msg import OpticalFlowRad
+from std_msgs.msg import Float64
 from qtcopter.msg import controller_msg
 from qtcopter.srv import UpdateWaypointsSrv
 from sensor_msgs.msg import Range
@@ -25,6 +26,8 @@ class FlowHandler:
         self.last_quality_warn = 0
         self.allow_zero_quality = rospy.get_param('px4flow/allow_zero_quality', False)
         self.previous_height = None
+        self.previous_angle = None
+        self.current_angle = None
 
         # check if we already have transformation (if flow node restarted)
         try:
@@ -82,6 +85,8 @@ class FlowHandler:
             rospy.logerr("An error occured while trying to set new waypoints")
         return True
 
+    def handle_compass_hdg_rad(self, data):
+        self.current_angle = math.radians(data.data)
     def handle_optical_flow_rad(self, data):
         if data.quality == 0:
             if self.last_quality_warn+1 < time():
@@ -92,6 +97,9 @@ class FlowHandler:
                 return
         else:
             self.last_good = time()
+        if self.current_angle is None:
+            # wait for angle publish
+            return 
 
         # TODO/FIXME/BUG: We have a race condition here that we must fix.
         # If a new transform to the waypoint is submitted after we sampled it,
@@ -99,7 +107,7 @@ class FlowHandler:
         # with the previous one (+delta). This is bad.
         # get latest (current) transformation
         try:
-            ((x, y, z), rot) = self._listener.lookupTransform(self._flow_frame,
+            ((my_x, my_y, z), rot) = self._listener.lookupTransform(self._flow_frame,
                                                             'waypoint',
                                                             rospy.Time(0))
         except (tf.LookupException, tf.ConnectivityException, tf.ExtrapolationException), e:
@@ -107,23 +115,59 @@ class FlowHandler:
             rospy.logwarn(str(e))
             return
 
-        # calculate flow addition
-        dx = data.integrated_x*data.distance
-        dy = data.integrated_y*data.distance
+        compass_hdg_rad = self.current_angle
+
+        #transform the old transform according to old angle
+        if self.previous_angle is None:
+            self.previous_angle = compass_hdg_rad
+        previous_angle = self.previous_angle
+
+        #calculate the addition to the compass axes system
+        cosa = math.cos(previous_angle)
+        sina = math.sin(previous_angle)
+
+        x = my_x * cosa + my_y * sina
+        y = -my_x * sina + my_y * cosa
+
+        # calculate flow addition in my axes system
+        my_dx = data.integrated_x*data.distance
+        my_dy = data.integrated_y*data.distance
+
+        #calculate the addition to the compass axes system
+        cosa = math.cos(compass_hdg_rad)
+        sina = math.sin(compass_hdg_rad)
+
+        dx = my_dx * cosa + my_dy * sina
+        dy = -my_dx * sina + my_dy * cosa
+
         if self.previous_height is None:
             self.previous_height = data.distance
 
         dz = data.distance - self.previous_height
         self.previous_height = data.distance
+
+        dangle = compass_hdg_rad - self.previous_angle
+        self.previous_angle = compass_hdg_rad
+
         z += dz
         x += dx
         y += dy
 
-        # publish (x+dx, y+dy, z+dz)
+        #calculate the values in my axes system.
+        #cosMinusa = cosa
+        #sinMinusa = -sina
+
+        my_x = x * cosa - y * sina
+        my_y = x * sina + y * cosa
+
+
+        # publish (my_x, my_y, z)
         theta = tf.transformations.euler_from_quaternion(rot)[2]
+        theta += dangle
+        rot = tf.transformations.quaternion_from_euler(0, 0, theta)
         rospy.loginfo('Publish flow delta: x {0}, y {1}, z {2}, theta {3}'.format(
-                                        x, y, z, theta))
-        self._publisher.sendTransform((x, y, z),
+                                        my_x, my_y, z, theta))
+        self._publisher.sendTransform((my_x, my_y, z),
                                       rot,
                                       rospy.Time.now(),
                                       'waypoint',
@@ -131,8 +175,8 @@ class FlowHandler:
         # publish to PID
         # TODO: Update theta from compass!
         msg = controller_msg()
-        msg.x = -y
-        msg.y = -x
+        msg.x = -my_y
+        msg.y = -my_x
         msg.z = z
         msg.t = theta
         self.__pid_input_pub.publish(msg)
@@ -147,7 +191,7 @@ class FlowHandler:
             # speed
             speed_x = data.integrated_x/(1.0*data.integration_time_us/1e6)*data.distance
             speed_y = data.integrated_y/(1.0*data.integration_time_us/1e6)*data.distance
-            
+
             # time of data capture
             capture_time = data.header.stamp.secs + data.header.stamp.nsecs/1e9
 
@@ -155,5 +199,6 @@ if __name__ == '__main__':
     rospy.init_node('flow')
     flow = FlowHandler()
     rospy.Subscriber("/px4flow/px4flow/raw/optical_flow_rad", OpticalFlowRad, flow.handle_optical_flow_rad)
+    rospy.Subscriber("/mavros/global_position/compass_hdg", Float64, flow.handle_compass_hdg_rad)
     rospy.spin()
 
