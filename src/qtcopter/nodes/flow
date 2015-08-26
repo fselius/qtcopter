@@ -166,7 +166,7 @@ class FlowHandler:
         theta += dangle
         rot = tf.transformations.quaternion_from_euler(0, 0, theta)
         rospy.loginfo('Publish flow delta: x {0}, y {1}, z {2}, theta {3}'.format(
-                                        my_x, my_y, z, theta))
+                                        my_x, my_y, z, dangle))
         self._publisher.sendTransform((my_x, my_y, z),
                                       rot,
                                       rospy.Time.now(),
@@ -178,7 +178,7 @@ class FlowHandler:
         msg.x = -my_y
         msg.y = -my_x
         msg.z = z
-        msg.t = theta
+        msg.t = dangle
         self.__pid_input_pub.publish(msg)
 
         #r = Range()
