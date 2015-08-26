@@ -4,7 +4,7 @@
 Find the target from contour detection and the contours nesting.
 
 Usage:
-    ./ransac_find.py <image>
+    ./scan_find.py <image/camera> [--debug] [--gain <value>]
 '''
 
 import cv2
@@ -33,12 +33,25 @@ def show_img(img, wait=True, title='bah'):
                 break
         cv2.destroyAllWindows()
 
+
+def dist(a, b):
+    return math.sqrt((a[0]-b[0])**2 + (a[1]-b[1])**2)
+
 class Circle:
     def __init__(self, center, radius):
         self.center = center
         self.radius = radius
     def __repr__(self):
         return '<Circle (%.2f, %.2f) %.2f>' % (self.center[0], self.center[1], self.radius)
+    def similar(self, other):
+        # check if another circle is similar to self.
+        # True if centers are within radius/5, and radiuses are within 20%.
+        p = 1.2
+        avg_radius = (other.radius+self.radius)/2.
+        maxdist = avg_radius/5.
+
+        r = 1.0*other.radius/self.radius
+        return ((1/p) < r) & (r < p) & (dist(self.center, other.center) < maxdist)
 
 class ScanFind:
     def __init__(self, center_black, number_of_rings, debug=True):
@@ -48,14 +61,12 @@ class ScanFind:
         self._canny_threshold2 = 20
         self._debug = debug
         self._min_radius = 20
-        #self._max_radius = max(320)
+        #self._max_radius = max(image.shape)
         self._scan_jump = self._min_radius/4.
         self._near_threshold = self._scan_jump*4
-    @staticmethod
-    def _dist(a, b):
-        return math.sqrt((a[0]-b[0])**2 + (a[1]-b[1])**2)
     def _near(self, a, b):
-        return self._dist(a, b)<self._near_threshold
+        " Are two points one near another? "
+        return dist(a, b)<self._near_threshold
     def find_target(self, image):
         '''
         Return the center of the target in pixel coordinates as tuple (x, y).
@@ -94,9 +105,7 @@ class ScanFind:
         # find horizontal and vertical lines
         circles_hor = self.find_lines(distance, image)
         circles_ver = self.find_lines(distance, image, transpose=True)
-        show_img(image, wait=False, title='debug2?')
 
-        # TODO: group by distance of centers also according to size of circle
         # groupify horizontal found circles
         groups_hor = self.groupify(circles_hor)
         circles_hor = []
@@ -116,6 +125,9 @@ class ScanFind:
         # find circles that are both in horizontal and vertical scan find
         good_circles = []
         for circle in circles_hor:
+            # we can't use circle.similar() here because horizontal and vertical
+            # circles are not necessarily with a similar radius if the camera is
+            # not directly above target.
             near = filter(lambda c: self._near(c.center, circle.center), circles_ver)
             if len(near) == 0:
                 continue
@@ -126,8 +138,8 @@ class ScanFind:
             good_circles.append(Circle(center, radius))
 
         if len(good_circles) > 1:
+            # TODO: select circle with most "lines"
             print 'WARNING: multiple circles..'
-            
 
         if self._debug:
             for circle in good_circles:
@@ -135,7 +147,7 @@ class ScanFind:
                 radius = circle.radius
                 cv2.circle(image, tuple(map(int, center)), 4, 255, -1)
                 cv2.circle(image, tuple(map(int, center)), int(radius), 255, 1)
-            show_img(image, wait=False, title='debug2?')
+            show_img(image, wait=False, title='scan lines')
 
         if len(good_circles) > 0:
             return good_circles[0].center, good_circles[0].radius 
@@ -148,12 +160,15 @@ class ScanFind:
         while len(circles) > 0:
             before_len = len(circles)
             for group in groups:
-                right = max(group, key=lambda c: c.center[1])
+                # find circles that are nearby/similar to our circle and group them.
+                # the purpose is to group together circles that are nearly identic
+                right  = max(group, key=lambda c: c.center[1])
                 bottom = max(group, key=lambda c: c.center[0])
                 last = set([right, bottom])
                 close = set()
                 for circle in last:
-                    close |= set(filter(lambda c: self._near(c.center, circle.center), circles))
+                    #close |= set(filter(lambda c: self._near(c.center, circle.center), circles))
+                    close |= set(filter(circle.similar, circles))
                 group |= close
                 circles -= close
             if before_len == len(circles):
@@ -164,11 +179,13 @@ class ScanFind:
 
         return groups
 
-            
 
-
-
-    def find_lines(self, distance, image, transpose=False):
+    def find_lines(self, distance, image, lines=5, transpose=False):
+        ''' find scan lines corresponding to target.
+        lines parameter specifies how many circles we are looking for.
+        5 lines means inner + 4 outer circles.
+        as we fly lower, we can't see the whole target, so we search for less circles.
+        '''
         if transpose:
             distance = distance.transpose()
         circles = []
@@ -240,8 +257,8 @@ class ScanFind:
                 cv2.line(image, tuple(map(int, center)), line_end, (255, 0, 0), 1)
                 cv2.circle(image, tuple(map(int, center)), 2, (255, 0, 0), -1)
 
-        if self._debug:
-            show_img(image, wait=False, title='debug2?')
+        #if self._debug:
+        #    show_img(image, wait=False, title='debug2?')
         return circles
 
     def check_circles(self, distance, center, img):
