@@ -2,12 +2,15 @@
 # Software License Agreement (BSD License)
 
 from mavros.msg import OverrideRCIn
-import inspect
+from Configuration import Configuration
 import rospy
+
+config = Configuration("NavConfig.json")
 
 class ChannelName:
     Roll, Pitch, Throttle, Yaw = range(4)
-    HumanOverrideChannel = 7
+    ServoChannel = config.GetConfigurationSection("params")["SetServoChannel"]
+    HumanOverrideChannel = config.GetConfigurationSection("params")["HumanOverrideChannel"]
 
 class RcMessage:
     __MINIMUM_VAL = 1000
@@ -31,7 +34,6 @@ class RcMessage:
         for i in range(0,7):
             self.__rcChannels[i] = OverrideRCIn.CHAN_RELEASE
 
-
     #set all rc_channels with mid value
     def BalanceRcChannels(self):
         for i in range(0,3):
@@ -41,6 +43,9 @@ class RcMessage:
         self.BalanceRcChannels()
         self.SetThrottle(self.__THROTTLE_ARM_VALUE)
         self.SetHumanOverride(OverrideRCIn.CHAN_NOCHANGE)
+
+    def SetServo(self, value):
+        self.__rcChannels[ChannelName.ServoChannel] = value
 
     def SetRoll(self, value):
         self.__rcChannels[ChannelName.Roll] = value
