@@ -36,7 +36,7 @@ class PIDController:
 
         #used to normalize factor
         self.normalizationFactor = float(normalizationFactor)
-        self.nValue = nValue
+        self.nValue = float(nValue)
 
         #used for float diff comparison
         self.epsilon = 0.01
@@ -91,7 +91,7 @@ class PIDController:
             output = self.MaxLimit
         elif output < self.MinLimit:
             output = self.MinLimit
-        output = output+self.normalizationFactor
-        rospy.loginfo("{0} :Error {1}, Proportinal {2}, Integral {3}, Derivative {4}, Fix {5}".format(self.axis, err, err*self.kp, self.integral, derivative, output))
+        output = output+self.nValue
+        rospy.loginfo("{0} :Error {1}, P: {2}, I: {3}, D: {4}, Fix {5}".format(self.axis, err, err*self.kp, self.integral, derivative, output))
         return output
 
