@@ -9,8 +9,9 @@ config = Configuration("NavConfig.json")
 
 class ChannelName:
     Roll, Pitch, Throttle, Yaw = range(4)
-    ServoChannel = config.GetConfigurationSection("params")["SetServoChannel"]
+    ServoChannel = config.GetConfigurationSection("params")["ServoChannel"]
     HumanOverrideChannel = config.GetConfigurationSection("params")["HumanOverrideChannel"]
+    CameraChannel = config.GetConfigurationSection("params")["CameraChannel"]
 
 class RcMessage:
     __MINIMUM_VAL = 1000
@@ -46,6 +47,9 @@ class RcMessage:
 
     def SetServo(self, value):
         self.__rcChannels[ChannelName.ServoChannel] = value
+
+    def SetCamera(self, value):
+        self.__rcChannels[ChannelName.CameraChannel] = value
 
     def SetRoll(self, value):
         self.__rcChannels[ChannelName.Roll] = value

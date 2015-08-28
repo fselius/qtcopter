@@ -14,8 +14,8 @@
         "Boolean":true
     },
     "params":{
-      "SetServoChannel":1,
-      "SetServoValue":1300,
+      "ServoChannel":6,
+      "CameraChannel":5,
       "HumanOverrideChannel":7,
       "HumanOverrideDefault":1800,
       "HumanOverrideThreshold":100,

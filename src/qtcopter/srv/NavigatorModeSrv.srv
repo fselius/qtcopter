@@ -1,3 +1,6 @@
 string message
+uint32 param1
+uint32 param2
+uint32 param3
 ---
 bool result

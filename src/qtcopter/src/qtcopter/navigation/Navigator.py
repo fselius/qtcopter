@@ -2,8 +2,7 @@
 # Software License Agreement (BSD License)
 
 import time
-import rospy, mavros
-from mavros import command
+import rospy
 from mavros.msg import OverrideRCIn, RCIn
 from mavros.srv import SetMode, CommandBool, CommandLongRequest, CommandLong
 from threading import Thread
@@ -92,12 +91,14 @@ class Navigator:
                     str = "publishing : {0} {1} {2} {3} elapsed:{4}".format(msg.x,msg.y,msg.z,msg.t,etime - stime)
                     rospy.loginfo(str)
                 except:
-                    rospy.logerr("controller msg from pid topic did not process")
-                    break
+                    rospy.logerr("controller msg from pid topic did not process. {0}".format(sys.exc_info()[0]))
             else:
                 rospy.loginfo("Human override activated, publishing thread stopping...")
                 break
         self.__numOfPublishThreads = 0
+        self.__isPidRunning=False
+        self.__pidControlService(False)
+        self.__isRcReseted = False
         return 1
 
     #SetCurrentMode : set the current mode of flight (navigator/set_mode callback)
@@ -111,23 +112,15 @@ class Navigator:
         if var == 'ARM':
             self.__setModeMavros(base_mode=0, custom_mode='STABILIZE')
             self.Arm(True)
-        elif var == 'BALL_DROP':
-            #channel = self.__navigatorParams["BallDropChannel"]
-            #value = self.__navigatorParams["BallDropValue"]
-            #command.long(command=CommandLongRequest.CMD_DO_SET_SERVO, param1=1, param2=1800)
-            self.__setServoService(command=CommandLongRequest.CMD_DO_SET_SERVO, param1=1, param2=1800)
-        elif var == 'BALL_STOP':
-            #command.long(command=CommandLongRequest.CMD_DO_SET_SERVO, param1=1, param2=1500)
-            self.__setServoService(command=CommandLongRequest.CMD_DO_SET_SERVO, param1=1, param2=1500)
-        elif var == 'CAMERA_UP':
-            #command.long(command=CommandLongRequest.CMD_DO_SET_SERVO, param1=2, param2=1800)
-            self.__setServoService(command=CommandLongRequest.CMD_DO_SET_SERVO, param1=2, param2=1800)
-        elif var == 'CAMERA_DOWN':
-            #command.long(command=CommandLongRequest.CMD_DO_SET_SERVO, param1=2, param2=2000)
-            self.__setServoService(command=CommandLongRequest.CMD_DO_SET_SERVO, param1=2, param2=2000)
         elif var == 'DISARM':
             self.__setModeMavros(base_mode=0, custom_mode='STABILIZE')
             self.Arm(False)
+        elif var == 'SET_SERVO':
+            if not request.param1 == None:
+                self.PublishRCServoMessage(request.param1)
+        elif var == 'SET_CAMERA':
+            if not request.param1 == None:
+                self.PublishRCCameraMessage(request.param1)
         elif var == 'ALT_HOLD':
             self.__setModeMavros(base_mode=0, custom_mode='ALT_HOLD')
         elif var == 'POSHOLD' or var == 'POS_HOLD':
@@ -140,10 +133,6 @@ class Navigator:
         elif var == 'PID_ACTIVE':
             self.__pidControlService(True)
             self.__isPidRunning=True
-            thread = Thread(target = self.__ConstantRatePublish, args = (0, ))
-            thread.start()
-        elif var == 'PID_ACTIVE_HOLD_ALT':
-            self.__setModeMavros(base_mode=0, custom_mode='ALT_HOLD')
             thread = Thread(target = self.__ConstantRatePublish, args = (0, ))
             thread.start()
         elif var == 'PID_STOP':
@@ -163,6 +152,18 @@ class Navigator:
             self.__rcMessage.SetYaw(yaw)
             self.__rcOverrideTopic.publish(self.__rcMessage.GetRcMessage())
 
+    #PublishRCServoMessage: publish a single rc message to activate servo.
+    #params: value: PWM value to activate the servo.
+    def PublishRCServoMessage(self, value):
+        self.__rcMessage.SetServo(value)
+        self.__rcOverrideTopic.publish(self.__rcMessage.GetRcMessage())
+
+    #PublishRCCameraMessage: publish a single rc message to activate camera.
+    #params: value: PWM value to change camera orientation.
+    def PublishRCCameraMessage(self, value):
+        self.__rcMessage.SetCamera(value)
+        self.__rcOverrideTopic.publish(self.__rcMessage.GetRcMessage())
+
     #HumanOverrideCallback : Constantly checking rc/override HumanOverride channel and maintaining a
     #boolean flag according to that
     def __HumanOverrideCallback(self, data):
@@ -181,6 +182,8 @@ class Navigator:
                 self.__humanOverride.Flag = True
                 self.__humanOverride.ChangeToMode = 'LAND'
                 self.__AfterHumanOverridePublish()
+            else:
+                self.__humanOverride.Flag = False
 
     #Performs as reset to all rc channels to bring control back to the operator
     def __AfterHumanOverridePublish(self):
@@ -189,23 +192,23 @@ class Navigator:
         self.__rcOverrideTopic.publish(self.__rcMessage.GetRcMessage())
         self.__rcMessage.ResetRcChannels() #release all channels to allow human full control
         self.__rcOverrideTopic.publish(self.__rcMessage.GetRcMessage())
-        self.__setModeMavros(base_mode=0, custom_mode=str(self.__humanOverride.ChangeToMode))
-        rospy.loginfo("Mode changed to {0}".format(self.__humanOverride.ChangeToMode))
+        #not changing mode after human override triggered.
+        #self.__setModeMavros(base_mode=0, custom_mode=str(self.__humanOverride.ChangeToMode))
+        #rospy.loginfo("Mode changed to {0}".format(self.__humanOverride.ChangeToMode))
 
     #IsPublishAllowed : Make all safety checks in this method.
     #return value : True/False according to all safety checks.
     def __IsPublishAllowed(self):
         if self.__humanOverride.Flag or self.__humanOverrideElapsedTime != 0 and \
                 (time.time() - self.__humanOverrideElapsedTime > self.__navigatorParams["HumanOverrideElapsedTimeAllowed"]):
-            rospy.loginfo("Human override channel activated, publish disabled.")
-            rospy.loginfo("Navigator is changing to mode {0}.".format(self.__humanOverride.ChangeToMode))
+            rospy.loginfo("Human override channel activated.")
             return False
         else:
             return True
 
 if __name__ == '__main__':
     try:
-        mavros.set_namespace('/mavros')
+        #mavros.set_namespace('/mavros')
         rospy.init_node('navigator', anonymous=True)
         nav = Navigator()
         #while not rospy.is_shutdown():
