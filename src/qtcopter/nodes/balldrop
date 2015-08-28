@@ -62,4 +62,3 @@ if __name__ == '__main__':
                       start='Fly to mission site',
                       outcomes='base reached')
     sm.execute()
-    rospy.spin()

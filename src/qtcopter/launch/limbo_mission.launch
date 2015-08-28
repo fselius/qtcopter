@@ -1,0 +1,9 @@
+<launch>
+  <!-- Mission node -->
+  <node pkg="qtcopter" type="limbo" name="limbo_mission" output="screen" />
+
+  <rosparam ns="cv">
+    <!-- how frequent should CV run -->
+    hz: 18
+  </rosparam>
+</launch>

@@ -1,8 +1,57 @@
 #!/usr/bin/env python2
 
-"""
-ROS node for limbo mission.
-"""
+from qtcopter import RosStateMachine as StateMachine
+from qtcopter import FlyToMission, FlyToBase
+from qtcopter import SpiralSearch, CenterAbove
+import rospy
 
 if __name__ == '__main__':
-    print('TODO')
+    rospy.init_node('limbo_mission')
+
+    #mission_position = rospy.get_param('mission_site/offset')
+    mission_position = None
+
+    sm = StateMachine(states={
+                          'Fly to mission site': FlyToMission(mission_position),
+                          'Spiral search for target': SpiralSearch(coarse_finder.find_roi_rects,
+                                                                   detailed_finder.find_limbo_poles,
+                                                                   spiral_time=rospy.get_param('config/spiral/spiral_time'),
+                                                                   spiral_factor=rospy.get_param('config/spiral/spiral_factor')),
+                          'Center above target': CenterAbove(detailed_finder.find_limbo_poles),
+                          'Flip camera forward': FlipCamera(),
+                          'Descend for first bar': GoToHeight('first',
+                                                              bars_finder.find_bars,
+                                                              target_height=rospy.get_param('limbo/first_height')),
+                          'Fly through first bars': FlyThroughBars('first',
+                                                                   bars_finder.find_bars,
+                                                                   target_height=rospy.get_param('limbo/first_height')),
+                          'Turn around': TurnAround(),
+                          # Maybe fly up and down again to make sure we're correct?
+                          'Go to height for second bar': GoToHeight('second',
+                                                                    bars_finder.find_bars,
+                                                                    target_height=rospy.get_param('limbo/second_height')),
+                          'Fly through second bars': FlyThroughBars('second',
+                                                                    bars_finder.find_bars,
+                                                                    target_height=rospy.get_param('limbo/second_height')),
+                          'Drop object on target': DropObject(),
+                          'Fly back to base': FlyToBase(),
+                      },
+                      transitions={
+                          'on way to mission site': 'Fly to mission site',
+                          'mission site reached': 'Spiral search for target',
+                          'continue spiraling': 'Spiral search for target',
+                          'found target': 'Center above target',
+                          'moving above target': 'Center above target',
+                          'target lost': 'Spiral search for target',
+                          'centered above target': 'Flip camera forward',
+                          'flipped camera forward': 'Descend for first bar',
+                          'at first bar height': 'Fly through bars one',
+                          'passed first bars': 'Turn around',
+                          'turned around': 'Go to height for second bar',
+                          'at target two height': 'Fly through second bars',
+                          'passed second bars': 'Fly back to base',
+                          'on way to base': 'Fly back to base',
+                      },
+                      start='Fly to mission site',
+                      outcomes='base reached')
+    sm.execute()

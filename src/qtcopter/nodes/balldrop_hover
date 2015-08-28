@@ -5,7 +5,7 @@ from qtcopter import RosStateMachine as StateMachine
 from qtcopter import FlyToMission, FlyToBase
 from qtcopter import SpiralSearch, CenterAbove
 from qtcopter.balldrop import DescendToTarget, DropObject
-from qtcopter.balldrop import HistogramFind, PolarityFind
+from qtcopter.balldrop import HistogramFind, PolarityFind, ScanFind
 import rospy
 
 
@@ -28,9 +28,10 @@ if __name__ == '__main__':
     else:
         coarse_finder = NoFind()
 
-    detailed_finder = PolarityFind(rospy.get_param('target/center_black', True),
-                                   rospy.get_param('target/black_rings', 3),
-                                   rospy.get_param('target/threshold', 100))
+    #detailed_finder = PolarityFind(rospy.get_param('target/center_black', True),
+    #                               rospy.get_param('target/black_rings', 3),
+    #                               rospy.get_param('target/threshold', 100))
+    detailed_finder = ScanFind()
 
     #mission_position = rospy.get_param('mission_site/offset')
     mission_position = None
@@ -42,7 +43,7 @@ if __name__ == '__main__':
                           'moving above target': 'Center above target',
                           'target lost': 'Center above target', # yeah, that's stupid. until we have SpiralSearch, we just retry.
                       },
-                      start='Fly to mission site',
+                      start='Center above target',
                       outcomes='centered above target')
     sm.execute()
     rospy.spin()
