@@ -61,7 +61,7 @@ class PIDManager:
             self.UpdateAxisConstantsService = rospy.Service('/pid_set_axis_gains', UpdateGainsSrv, self.UpdateAxisGainsRequestHandler)
             self.UpdateAllAxisGainsService = rospy.Service('/pid_set_all_gains', AllGainsSrv, self.SetAllGainsHandler)
         except:
-            rospy.logerr("An error occured initiatin PIDManager class: ", sys.exc_info())
+            rospy.logerr("An error occured initiatin PIDManager class: {0} ".format(sys.exc_info()))
 
     #================================================================
     #DataCollector Callback
@@ -99,10 +99,10 @@ class PIDManager:
     #and updates IsRunning depended on IsRunning != request.state
     #======================================================================
     def PIDControlServiceRequestHandler(self, req):
-        rospy.loginfo("PidControlService request - requested running: ", req.state)
+        rospy.loginfo("PidControlService request - requested running: {0}".format(req.state))
         if not self.IsRunning == req.state:
             self.IsRunning = req.state
-            rospy.loginfo("PID IsRunning set to: ", self.IsRunning)
+            rospy.loginfo("PID IsRunning set to: {0}".format(self.IsRunning))
         else:
             rospy.loginfo("PID IsRunning state wasn't changed, it was already as requested")
         return PidControlSrvResponse(self.IsRunning)
@@ -124,8 +124,8 @@ class PIDManager:
             rospy.logerr("Invalid channel name was provided")
             return UpdateGainsSrvResponse(False)
         try:
-            rospy.loginfo("UpdateAxisGains request for: ",req.channel)
-            rospy.loginfo("New values are (Kp,Kd,Ki): ",req.kp,req.kd,req.ki)
+            rospy.loginfo("UpdateAxisGains request for: {0}".format(req.channel))
+            rospy.loginfo("New values are (Kp,Kd,Ki): {0} {1} {2}".format(req.kp,req.kd,req.ki))
             minLimit = self.AxisControllers[req.channel].MinLimit
             maxLimit = self.AxisControllers[req.channel].MaxLimit
             nValue = self.AxisControllers[req.channel].nValue
@@ -137,7 +137,7 @@ class PIDManager:
             self.IsRunning = isRunning
             return UpdateGainsSrvResponse(True)
         except:
-            rospy.logerr("There was an error", sys.exc_info()[0])
+            rospy.logerr("There was an error {0}".format(sys.exc_info()[0]))
             return UpdateGainsSrvResponse(False)
 
     #======================================================================
@@ -146,7 +146,7 @@ class PIDManager:
     #and allow resetting the integral part of all channels
     #======================================================================
     def SetAllGainsHandler(self, req):
-        rospy.logerr("Set all gains request received")
+        rospy.loginfo("Set all gains request received")
         #X gains
         minLimit = self.AxisControllers['X'].MinLimit
         maxLimit = self.AxisControllers['X'].MaxLimit
@@ -183,10 +183,10 @@ class PIDManager:
                 }
 
             self.IsRunning = isRunning
-            rospy.logerr("New gains were set")
+            rospy.loginfo("New gains were set")
             return AllGainsSrvResponse(True)
         except:
-            rospy.logerr("There was an error", sys.exc_info()[0])
+            rospy.logerr("There was an error {0}".format(sys.exc_info()[0]))
             return AllGainsSrvResponse(False)
 
 #======================================================================

@@ -43,7 +43,7 @@ class PIDController:
 
         #axis name
         self.axis = axis
-        rospy.loginfo("Started PIDController with %s %s %s %s" %(kp,kd,ki,dt))
+        rospy.loginfo("Started PIDController with {0} {1} {2}".format(kp,kd,ki,dt))
 
     #======================================================================
     #SetError method
@@ -63,7 +63,7 @@ class PIDController:
         self.integral = 0
         self.LastError = 0
         self.error = 0
-        print "Resetting integral for channel: ", self.axis
+        rospy.loginfo("Resetting integral for channel: {0}".format(self.axis))
 
     #======================================================================
     #GetFix method
@@ -80,18 +80,18 @@ class PIDController:
         #Fix is calculated to be err*kp + integral*ki + derivative*kd
         #integral component is bounded in order to prevent windup effect
         #output in bounded in order not to hurt quadcopter
-        self.integral += self.ki*err
+        self.integral += (self.ki*err)/self.dt
         if self.integral > self.MaxLimit:
             self.integral = self.MaxLimit
         elif self.integral < self.MinLimit:
             self.integral = self.MinLimit
-        derivative = self.kd*(err-lastError)/self.dt
+        derivative = self.kd*(err-lastError)*self.dt
         output = self.kp*err + self.integral + derivative
         if output > self.MaxLimit:
             output = self.MaxLimit
         elif output < self.MinLimit:
             output = self.MinLimit
         output = output+self.normalizationFactor
-        rospy.loginfo(self.axis, ":Error %s, Proportinal %s, Integral %s, Derivative %s, Fix %s" %(err, err*self.kp, self.integral, derivative, output))
+        rospy.loginfo("{0} :Error {1}, Proportinal {2}, Integral {3}, Derivative {4}, Fix {5}".format(self.axis, err, err*self.kp, self.integral, derivative, output))
         return output
 

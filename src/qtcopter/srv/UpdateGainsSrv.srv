@@ -1,6 +1,6 @@
-uint32 kp
-uint32 kd
-uint32 ki
+float64 kp
+float64 kd
+float64 ki
 string channel
 ---
 bool result
