@@ -2,7 +2,7 @@
 
 from qtcopter import DistanceFind
 from qtcopter import RosStateMachine as StateMachine
-from qtcopter import FlyToMission, FlyToBase
+from qtcopter import FlyToMissionFlow, FlyToBase
 from qtcopter import SpiralSearch, CenterAbove
 from qtcopter.balldrop import DescendToTarget, DropObject
 from qtcopter.balldrop import HistogramFind, PolarityFind, ScanFind
@@ -33,17 +33,22 @@ if __name__ == '__main__':
     #                               rospy.get_param('target/threshold', 100))
     detailed_finder = ScanFind()
 
-    #mission_position = rospy.get_param('mission_site/offset')
-    mission_position = None
+    mission_position = rospy.get_param('mission_site/offset')
+    #mission_position = None
 
     sm = StateMachine(states={
+                          'Fly to mission site': FlyToMissionFlow(mission_position),
                           'Center above target': CenterAbove(detailed_finder.find_target),
                       },
                       transitions={
+                          'on way to mission site': 'Fly to mission site',
+                          #'mission site reached': 'Spiral search for target',
+                          'mission site reached': 'Center above target',
                           'moving above target': 'Center above target',
                           'target lost': 'Center above target', # yeah, that's stupid. until we have SpiralSearch, we just retry.
                       },
-                      start='Center above target',
+                      #start='Center above target',
+                      start='Fly to mission site',
                       outcomes='centered above target')
     sm.execute()
     rospy.spin()

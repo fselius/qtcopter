@@ -30,6 +30,11 @@
 
     <!-- Configuration for polarity find algo. -->
     threshold: 100
+
+	<!-- mission location -->
+	mission_site:
+	  <!-- relative to forward -->
+	  offset: [0, -5, 0]
   </rosparam>
   <rosparam ns="cv">
     <!-- how frequent should CV run -->
