@@ -5,7 +5,7 @@
         "KI":"20",
         "MinLimit":"400",
         "MaxLimit":"600",
-        "NValue":"500"
+        "NValue":"1476"
     },
   "Y":{
         "KP":"100",
@@ -13,7 +13,7 @@
         "KI":"20",
         "MinLimit":"400",
         "MaxLimit":"600",
-        "NValue":"500"
+        "NValue":"1540"
     },
   "Z":{
         "KP":"100",
@@ -21,7 +21,7 @@
         "KI":"0.5",
         "MinLimit":"000",
         "MaxLimit":"700",
-        "NValue":"300"
+        "NValue":"1300"
     },
   "Theta":{
         "KP":"1",
