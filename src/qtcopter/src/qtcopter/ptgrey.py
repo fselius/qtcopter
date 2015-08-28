@@ -147,7 +147,7 @@ class PTGreyCamera(object):
 
 if __name__=='__main__':
     parser = argparse.ArgumentParser(description='Find gain and threshold for balldrop.')
-    parser.add_argument('--shutter', default=10, type=int, help='shutter time [ms] (10 ms default for indoor, 1-2 ms is fine for outside)')
+    parser.add_argument('--shutter', default=10, type=float, help='shutter time [ms] (10 ms default for indoor, 1-2 ms is fine for outside)')
     parser.add_argument('--gain', default=0, type=float, help='gain (-5-20~, default 0)')
     args = parser.parse_args()
 
@@ -181,7 +181,7 @@ if __name__=='__main__':
         print '%.3fs, %.2f fps' % (t, 1/t)
         try:
             pass
-            #show_img(f, wait=False)
+            show_img(f, wait=False)
         except KeyboardInterrupt:
             break
 

@@ -72,7 +72,7 @@ class ScanFind:
         Return the center of the target in pixel coordinates as tuple (x, y).
         '''
         # resize input image, assuming target takes at least 1/2 of the frame.
-        self.resize = 400
+        self.resize = 800
         orig_shape = image.shape[:2]
         while min(image.shape[:2]) > self.resize:
             image = cv2.pyrDown(image)
@@ -86,7 +86,8 @@ class ScanFind:
     def find_circles(self, image):
         image = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
         # blur kernel about 20 for 1000x1000px, 10 for 500x500, 5 for 250x250
-        blurk = max(image.shape)/50
+        #blurk = max(image.shape)/50
+        blurk = max(image.shape)/100
         if ~blurk&1:
             blurk += 1
         image = cv2.medianBlur(image, blurk)
@@ -179,7 +180,7 @@ class ScanFind:
 
         return groups
 
-
+    #@profile
     def find_lines(self, distance, image, lines=5, transpose=False):
         ''' find scan lines corresponding to target.
         lines parameter specifies how many circles we are looking for.
@@ -192,8 +193,8 @@ class ScanFind:
         count = np.ceil(distance.shape[0]/self._scan_jump)
         for y in np.linspace(0, distance.shape[0]-1, num=count):
             xx = np.arange(distance.shape[1])
-            yy = np.tile(y, len(xx)).astype(np.int)
-            z = distance[yy, xx]
+            #yy = np.tile(int(y), len(xx))
+            z = distance[y, xx]
 
             # indexes of borders
             zi = (z==0).nonzero()[0]
@@ -213,20 +214,41 @@ class ScanFind:
             #print 'avg:', avg, 'low/high:', avg*0.8, avg*1.2
 
             # find 5 consecutive values that are around the average of the 5 values
-            p = 1.2
+            p = 1.2*avg
+            p1 = avg/1.2
             # ratio 1: 1/1/1/1/2 (outer to inner ring)
-            r1 = (1/p<a0/avg) & (a0/avg<p) &\
-                 (1/p<a1/avg) & (a1/avg<p) &\
-                 (1/p<a2/avg) & (a2/avg<p) &\
-                 (1/p<a3/avg) & (a3/avg<p) &\
-                 (1/p<a4/2/avg) & (a4/2/avg<p)
+            
+            #print 'd:', d, 'p:', p, 'p1:', p1
+            #dd = (p1<d)&(d<p)
+            #rmid = dd[1:-3]&dd[2:-2]&dd[3:-1]
+            #r1 = dd[:-4] & rmid
+            #r2 = rmid&dd[4:]
+
+            '''
+            a02 = (2*p1<a0) & (a0<2*p)
+            a42 = (2*p1<a4) & (a4<2*p)
+            a0 = (p1<a0) & (a0<p)
+            a1 = (p1<a1) & (a1<p)
+            a2 = (p1<a2) & (a2<p)
+            a3 = (p1<a3) & (a3<p)
+            a4 = (p1<a4) & (a4<p)
+
+            r1 = a0&a1&a2&a3&a42
+            r2 = a02&a1&a2&a3&a4
+            '''
+
+            r1 = (p1<a0) & (a0<p) &\
+                 (p1<a1) & (a1<p) &\
+                 (p1<a2) & (a2<p) &\
+                 (p1<a3) & (a3<p) &\
+                 (p1<a4/2) & (a4/2<p)
 
             # ratio 2: 2/1/1/1/1 (inner to outer ring)
-            r2 = (1/p<a0/2/avg) & (a0/2/avg<p) &\
-                 (1/p<a1/avg) & (a1/avg<p) &\
-                 (1/p<a2/avg) & (a2/avg<p) &\
-                 (1/p<a3/avg) & (a3/avg<p) &\
-                 (1/p<a4/avg) & (a4/avg<p)
+            r2 = (p1<a0/2) & (a0/2<p) &\
+                 (p1<a1) & (a1<p) &\
+                 (p1<a2) & (a2<p) &\
+                 (p1<a3) & (a3<p) &\
+                 (p1<a4) & (a4<p)
 
             for i in r1.nonzero()[0]:
                 start = di[i]
@@ -240,8 +262,9 @@ class ScanFind:
 
                 circles.append(Circle(center, radius))
 
-                cv2.line(image, tuple(map(int, center)), line_end, 255, 1)
-                cv2.circle(image, tuple(map(int, center)), 2, 255, -1)
+                if self._debug:
+                    cv2.line(image, tuple(map(int, center)), line_end, 255, 1)
+                    cv2.circle(image, tuple(map(int, center)), 2, 255, -1)
 
             for i in r2.nonzero()[0]:
                 end = di[i+4]+d[i+4]
@@ -254,8 +277,9 @@ class ScanFind:
 
                 circles.append(Circle(center, radius))
 
-                cv2.line(image, tuple(map(int, center)), line_end, (255, 0, 0), 1)
-                cv2.circle(image, tuple(map(int, center)), 2, (255, 0, 0), -1)
+                if self._debug:
+                    cv2.line(image, tuple(map(int, center)), line_end, (255, 0, 0), 1)
+                    cv2.circle(image, tuple(map(int, center)), 2, (255, 0, 0), -1)
 
         #if self._debug:
         #    show_img(image, wait=False, title='debug2?')
@@ -289,6 +313,7 @@ if __name__ == '__main__':
     parser.add_argument('--shutter', default=10, type=float, help='shutter time (10 ms default for indoor, 1-2 ms is fine for outside)')
     parser.add_argument('--gain', default=0, type=float, help='gain')
     parser.add_argument('--debug', action='store_true', help='debug')
+    parser.add_argument('--quite', action='store_true', help='quite')
     parser.add_argument('-t', '--threshold', default=100, help='')
     parser.add_argument('cam', nargs='*', help='image file or camera')
 
@@ -299,16 +324,18 @@ if __name__ == '__main__':
         finder = ScanFind(True, 3, debug=args.debug)
         for image in args.cam:
             image = cv2.imread(image)
-            #center, size = finder.find_target(image)
-            cProfile.run("center, size = finder.find_target(image)")
+            center, size = finder.find_target(image)
+            #cProfile.run("center, size = finder.find_target(image)")
             print 'center:', center
             if center is not None:
                 cv2.circle(image, tuple(map(int, center)), 10, (0, 255, 255), -1)
-                cv2.circle(image, tuple(map(int, center)), int(size/2), (0, 255, 255), 3)
-                show_img(image)
+                cv2.circle(image, tuple(map(int, center)), int(size), (0, 255, 255), 3)
+                if not args.quite:
+                    show_img(image)
             else:
                 print 'could not find target'
-                show_img(image)
+                if not args.quite:
+                    show_img(image)
     else:
         c = PTGreyCamera()
         # set manual values
