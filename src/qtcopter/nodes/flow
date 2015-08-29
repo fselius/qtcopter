@@ -111,7 +111,7 @@ class FlowHandler:
         lpf_average_distance = sum(self.lpf) / float(len(lpf))
         lpf_curent_distance = data.distance
         if average distance * 1.1 < data.distance or average_distance * 0.9 > data.distance:
-            data.distance = self.lpf[4]
+            data.distance = self.previous_height
         self.lpf.append(lpf_current_distance)
         self.lpf.pop(0)
 
