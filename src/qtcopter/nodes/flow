@@ -31,6 +31,7 @@ class FlowHandler:
         self.previous_angle = None
         self.current_angle = None
         self.sum_angle = 0
+        self.lpf = [2,2,2,2,2]
         # check if we already have transformation (if flow node restarted)
         try:
             ((x, y, z), rot) = self._listener.lookupTransform(self._flow_frame, 'waypoint', rospy.Time(0))
@@ -106,6 +107,13 @@ class FlowHandler:
             if self.previous_height is not None:
                 rospy.logwarn('Flow distance (height) = 0, using previous height %r' % (self.previous_height, ))
                 data.distance = self.previous_height
+
+        lpf_average_distance = sum(self.lpf) / float(len(lpf))
+        lpf_curent_distance = data.distance
+        if average distance * 1.1 < data.distance or average_distance * 0.9 > data.distance:
+            data.distance = self.lpf[4]
+        self.lpf.append(lpf_current_distance)
+        self.lpf.pop(0)
 
         if self.current_angle is None:
             # wait for angle publish
