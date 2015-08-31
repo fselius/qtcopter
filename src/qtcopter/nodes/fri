@@ -1,0 +1,32 @@
+#!/usr/bin/env python2
+
+from qtcopter import DistanceFind
+from qtcopter import RosStateMachine as StateMachine
+from qtcopter import FlyToMissionFlow, FlyToBase
+from qtcopter import SpiralSearch, CenterAbove
+import rospy
+
+
+class NoFind:
+    def find_roi_rects(self, image, **kwargs):
+        return [(0, 0, image.shape[1], image.shape[0])]
+
+if __name__ == '__main__':
+    rospy.init_node('fri_mission')
+
+    mission_position = rospy.get_param('target/mission_site/offset')
+    #mission_position = None
+
+    sm = StateMachine(states={
+                          'Fly to mission site': FlyToMissionFlow(mission_position),
+                      },
+                      transitions={
+                          'on way to mission site': 'Fly to mission site',
+                          #'mission site reached': 'Spiral search for target',
+                          #'mission site reached': 'Center above target',
+                      },
+                      #start='Center above target',
+                      start='Fly to mission site',
+                      outcomes='mission site reached') #'centered above target')
+    sm.execute()
+    rospy.spin()

@@ -1,0 +1,12 @@
+<launch>
+  <!-- Mission node -->
+  <node pkg="qtcopter" type="fri" name="fri_mission" output="screen" />
+
+  <!-- Mission configuration -->
+  <rosparam ns="target">
+    <!-- mission location -->
+    mission_site:
+      <!-- relative to forward -->
+      offset: [5, 0, 0]
+  </rosparam>
+</launch>

@@ -14,7 +14,7 @@ lpf = [2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2
 previous_height = 2
 
 for line in fileinput.input():
-    if 'range' in line:
+    if line.startswith('range'):
         distance = float(line.split()[1])
         if distance == 0:
             distance = previous_height
@@ -30,4 +30,4 @@ for line in fileinput.input():
         previous_height = distance
         lpf.append(lpf_current_distance)
         lpf.pop(0)
-        print lpf_current_distance,distance
+        print '%.5f,%.5f' % (lpf_current_distance, distance)

@@ -5,7 +5,7 @@ import rospy
 from mavros_extras.msg import OpticalFlowRad
 from std_msgs.msg import Float64
 from qtcopter.msg import controller_msg
-from qtcopter.srv import UpdateWaypointsSrv
+#from qtcopter.srv import UpdateWaypointsSrv
 from sensor_msgs.msg import Range
 
 import tf
@@ -16,7 +16,7 @@ class FlowHandler:
     def __init__(self):
         self._listener = tf.TransformListener()
         self._publisher = tf.TransformBroadcaster()
-        self._flowUpdateWayPointsSrv = rospy.Service('/flow/update_waypoints', UpdateWaypointsSrv, self._UpdateWaypointsRequestHandler)
+        #self._flowUpdateWayPointsSrv = rospy.Service('/flow/update_waypoints', UpdateWaypointsSrv, self._UpdateWaypointsRequestHandler)
         tr = tf.Transformer()
 
         # TODO: make a frame for the flow
@@ -31,7 +31,7 @@ class FlowHandler:
         self.previous_angle = None
         self.current_angle = None
         self.sum_angle = 0
-        self.lpf = [2,2,2,2,2]
+        #self.lpf = [2,2,2,2,2]
         # check if we already have transformation (if flow node restarted)
         try:
             ((x, y, z), rot) = self._listener.lookupTransform(self._flow_frame, 'waypoint', rospy.Time(0))
@@ -76,6 +76,7 @@ class FlowHandler:
 
     #UpdateWaypointsRequestHandler : handler function for setting new waypoints to upon service call.
     #param : request - holds x y z t values.
+    '''
     def _UpdateWaypointsRequestHandler(self, request):
         try:
             rot = tf.transformations.quaternion_from_euler(0, 0, request.t)
@@ -87,7 +88,7 @@ class FlowHandler:
         except:
             rospy.logerr("An error occured while trying to set new waypoints")
         return True
-
+    '''
     def handle_compass_hdg_rad(self, data):
         self.current_angle = math.radians(data.data)
         #print 'NEW ANGLE:', self.current_angle/math.pi
@@ -108,12 +109,12 @@ class FlowHandler:
                 rospy.logwarn('Flow distance (height) = 0, using previous height %r' % (self.previous_height, ))
                 data.distance = self.previous_height
 
-        lpf_average_distance = sum(self.lpf) / float(len(lpf))
-        lpf_curent_distance = data.distance
-        if average distance * 1.1 < data.distance or average_distance * 0.9 > data.distance:
-            data.distance = self.previous_height
-        self.lpf.append(lpf_current_distance)
-        self.lpf.pop(0)
+        #lpf_average_distance = sum(self.lpf) / float(len(lpf))
+        #lpf_curent_distance = data.distance
+        #if average distance * 1.1 < data.distance or average_distance * 0.9 > data.distance:
+        #    data.distance = self.previous_height
+        #self.lpf.append(lpf_current_distance)
+        #self.lpf.pop(0)
 
         if self.current_angle is None:
             # wait for angle publish
