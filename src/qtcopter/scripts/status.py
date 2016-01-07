@@ -1,7 +1,9 @@
 #!/usr/bin/env python      
 import Tkinter as tk       
 import tkFont 
+import random
 import sys
+import time
 
 class Application(tk.Frame):
     def __init__(self, master=None):
@@ -17,6 +19,7 @@ class Application(tk.Frame):
     def createWidgets(self):
         # make main window resizable
         top = self.winfo_toplevel()
+        self.top = top
         top.rowconfigure(0, weight=1)
         top.columnconfigure(0, weight=1)
         #self.rowconfigure(0, weight=1)
@@ -37,6 +40,7 @@ class Application(tk.Frame):
 
         self.directions = DirectionsWindow(self)
         self.directions.grid(row=1, columnspan=3)
+        top.update()
     def setMissionStatus(self, status):
         self.mission_status = status
     def close_windows(self):
@@ -87,7 +91,6 @@ class DirectionsWindow(tk.Frame):
         
         self.canvas = tk.Canvas(self)
         self.canvas.pack(fill="both", expand="1")
-        self.old_arrow_id = None
         self.set_arrow(100,200)
         #self.canvas.create_rectangle(50, 25, 150, 75, fill="bisque", tags="r1")
         #self.canvas.create_line(0,0, 50, 25, arrow="last", tags="to_r1")
@@ -113,30 +116,41 @@ class DirectionsWindow(tk.Frame):
         C = self.canvas
         x0 = None
         y0 = None 
-        old_arrow_id = self.old_arrow_id
         arrow_width = None
         width  = x0 if x0 != None else int(C.cget("width"))/2
         height = y0 if y0 != None else int(C.cget("height"))/2
-        x1 *= width/5
-        y1 *= height/5
+        x1 *= width*2
+        y1 *= height*2
         if arrow_width == None:
-            arrow_width = min(int(C.cget("width")), int(C.cget("height")))/25
+            arrow_width = min(int(C.cget("width")), int(C.cget("height")))/15
+
+        if (abs(x1) > int(C.cget("width"))/2):
+            ratio = 1.0*int(C.cget("width"))/(2*abs(x1))
+            x1 *= ratio
+            y1 *= ratio
+        if (abs(y1) > int(C.cget("height"))/2):
+            ratio = 1.0*int(C.cget("height"))/(2*abs(y1))
+            x1 *= ratio
+            y1 *= ratio
+            
         x1_fixed = x1 + width
         y1_fixed = height - y1
-        if x1_fixed < 0:
-            x1_fixed = 0
-        if y1_fixed < 0:
-            y1_fixed = 0
-        if x1_fixed > int(C.cget("width")):
-            x1_fixed = int(C.cget("width"))
-        if y1_fixed > int(C.cget("height")):
-            y1_fixed = int(C.cget("height"))
-    
-        if old_arrow_id:
-            C.delete(old_arrow_id)
+        #if x1_fixed < 0:
+        #    x1_fixed = 0
+        #if y1_fixed < 0:
+        #    y1_fixed = 0
+        #if abs(x1_fixed) > int(C.cget("width")):
+        #    ratio = 1.0*int(C.cget("width"))/abs(x1_fixed)
+        #    x1_fixed *= ratio
+        #    y1_fixed *= ratio
+        #if abs(y1_fixed) > int(C.cget("height")):
+        #    ratio = 1.0*int(C.cget("height"))/abs(y1_fixed)
+        #    x1_fixed *= ratio
+        #    y1_fixed *= ratio
+
+        C.delete("all")
         arrow_id = C.create_line(width, height, x1_fixed, y1_fixed, arrow=tk.LAST, width = arrow_width)
         C.pack()
-        self.old_arrow_id = arrow_id
 
 # create app
 app = Application()
@@ -160,6 +174,15 @@ if ros:
     tf_sub = rospy.Subscriber("/tf", tfMessage, app.callback_tf)
     # status?
     # height?
+else:
+    for i in xrange(50):
+        x = random.uniform(-2,2)
+        y = random.uniform(-2,2)
+        z = random.uniform(-2,2)
+        app.directions.set_arrow(x,y)
+        app.Distance.set_xyz(x, y, z) 
+        app.top.update()
+        time.sleep(5)
 app.mainloop()
 if ros:
     tf_sub.unregister()
