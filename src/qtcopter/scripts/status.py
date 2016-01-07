@@ -1,5 +1,6 @@
 #!/usr/bin/env python      
 import Tkinter as tk       
+import tkFont 
 import sys
 
 class Application(tk.Frame):
@@ -9,6 +10,7 @@ class Application(tk.Frame):
         self.grid(sticky=tk.E+tk.W)
         self.createWidgets()
         #self.direction_window()
+        self.old_arrow_id = 0
     def direction_window(self):
         self.directions = tk.Toplevel(self.master)
         self.app = DirectionsWindow(self.directions)
@@ -43,6 +45,7 @@ class Application(tk.Frame):
 
     def set_tf(self, x, y, z):
         self.Distance.set_xyz(x, y, z) 
+        self.old_arrow_id = self.directions.set_arrow(x, y, old_arrow_id)
     def callback_tf(self, msg):
         is_good = lambda t: t.header.frame_id=='downward_cam_optical_frame' and\
                             t.child_frame_id=='waypoint'
@@ -58,19 +61,20 @@ class Application(tk.Frame):
 class Distance(tk.Frame):
     def __init__(self, master):
         tk.Frame.__init__(self, master)
+        self.font = tkFont.Font(family="Helvetica", size=32)
         self.createStuff()
         self.grid()
     def createStuff(self):
         self.x = tk.StringVar()
-        self.xl = tk.Label(self, textvariable=self.x)
+        self.xl = tk.Label(self, textvariable=self.x, font=self.font)
         self.xl.grid(row=0, column=0)
         
         self.y = tk.StringVar()
-        self.yl = tk.Label(self, textvariable=self.y)
+        self.yl = tk.Label(self, textvariable=self.y, font=self.font)
         self.yl.grid(row=0, column=1)
         
         self.z = tk.StringVar()
-        self.zl = tk.Label(self, textvariable=self.z)
+        self.zl = tk.Label(self, textvariable=self.z, font=self.font)
         self.zl.grid(row=0, column=2)
 
         self.set_xyz(0, 0, 0)
@@ -84,24 +88,51 @@ class DirectionsWindow(tk.Frame):
         
         self.canvas = tk.Canvas(self)
         self.canvas.pack(fill="both", expand="1")
-        self.canvas.create_rectangle(50, 25, 150, 75, fill="bisque", tags="r1")
-        self.canvas.create_line(0,0, 50, 25, arrow="last", tags="to_r1")
-        self.canvas.bind("<B1-Motion>", self.move_box)
-        self.canvas.bind("<ButtonPress-1>", self.start_move)
+        #self.canvas.create_rectangle(50, 25, 150, 75, fill="bisque", tags="r1")
+        #self.canvas.create_line(0,0, 50, 25, arrow="last", tags="to_r1")
+        #self.canvas.bind("<B1-Motion>", self.move_box)
+        #self.canvas.bind("<ButtonPress-1>", self.start_move)
     def move_box(self, event):
-        deltax = event.x - self.x
-        deltay = event.y - self.y
-        self.canvas.move("r1", deltax, deltay)
-        coords = self.canvas.coords("to_r1")
-        coords[2] += deltax
-        coords[3] += deltay
-        self.canvas.coords("to_r1", *coords)
-        self.x = event.x
-        self.y = event.y
+        pass
+        #deltax = event.x - self.x
+        #deltay = event.y - self.y
+        #self.canvas.move("r1", deltax, deltay)
+        #coords = self.canvas.coords("to_r1")
+        #coords[2] += deltax
+        #coords[3] += deltay
+        #self.canvas.coords("to_r1", *coords)
+        #self.x = event.x
+        #self.y = event.y
 
     def start_move(self, event):
-        self.x = event.x
-        self.y = event.y
+        pass
+        #self.x = event.x
+        #self.y = event.y
+    def set_arrow(x1 ,y1 ,old_arrow_id):
+        C = self.canvas
+        x0 = None
+        y0 = None 
+        arrow_width = None
+        width  = x0 if x0 != None else int(C.cget("width"))/2
+        height = y0 if y0 != None else int(C.cget("height"))/2
+        if arrow_width == None:
+            arrow_width = min(int(C.cget("width")), int(C.cget("height")))/25
+        x1_fixed = x1 + width
+        y1_fixed = height - y1
+        if x1_fixed < 0:
+            x1_fixed = 0
+        if y1_fixed < 0:
+            y1_fixed = 0
+        if x1_fixed > int(C.cget("width")):
+            x1_fixed = int(C.cget("width"))
+        if y1_fixed > int(C.cget("height")):
+            y1_fixed = int(C.cget("height"))
+    
+        if old_arrow_id:
+            C.delete(old_arrow_id)
+        arrow_id = C.create_line(width, height, x1_fixed, y1_fixed, arrow=Tkinter.LAST, width = arrow_width)
+        C.pack()
+        return arrow_id
 
 # create app
 app = Application()
