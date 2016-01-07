@@ -45,7 +45,7 @@ class Application(tk.Frame):
 
     def set_tf(self, x, y, z):
         self.Distance.set_xyz(x, y, z) 
-        self.old_arrow_id = self.directions.set_arrow(x, y, old_arrow_id)
+        self.old_arrow_id = self.directions.set_arrow(x, y, self.old_arrow_id)
     def callback_tf(self, msg):
         is_good = lambda t: t.header.frame_id=='downward_cam_optical_frame' and\
                             t.child_frame_id=='waypoint'
