@@ -10,7 +10,6 @@ class Application(tk.Frame):
         self.grid(sticky=tk.E+tk.W)
         self.createWidgets()
         #self.direction_window()
-        self.old_arrow_id = 0
     def direction_window(self):
         self.directions = tk.Toplevel(self.master)
         self.app = DirectionsWindow(self.directions)
@@ -45,7 +44,7 @@ class Application(tk.Frame):
 
     def set_tf(self, x, y, z):
         self.Distance.set_xyz(x, y, z) 
-        self.old_arrow_id = self.directions.set_arrow(x, y, self.old_arrow_id)
+        self.directions.set_arrow(x, y)
     def callback_tf(self, msg):
         is_good = lambda t: t.header.frame_id=='downward_cam_optical_frame' and\
                             t.child_frame_id=='waypoint'
@@ -88,6 +87,8 @@ class DirectionsWindow(tk.Frame):
         
         self.canvas = tk.Canvas(self)
         self.canvas.pack(fill="both", expand="1")
+        self.old_arrow_id = None
+        self.set_arrow(100,200)
         #self.canvas.create_rectangle(50, 25, 150, 75, fill="bisque", tags="r1")
         #self.canvas.create_line(0,0, 50, 25, arrow="last", tags="to_r1")
         #self.canvas.bind("<B1-Motion>", self.move_box)
@@ -108,13 +109,16 @@ class DirectionsWindow(tk.Frame):
         pass
         #self.x = event.x
         #self.y = event.y
-    def set_arrow(x1 ,y1 ,old_arrow_id):
+    def set_arrow(self, x1, y1):
         C = self.canvas
         x0 = None
         y0 = None 
+        old_arrow_id = self.old_arrow_id
         arrow_width = None
         width  = x0 if x0 != None else int(C.cget("width"))/2
         height = y0 if y0 != None else int(C.cget("height"))/2
+        x1 *= width/5
+        y1 *= height/5
         if arrow_width == None:
             arrow_width = min(int(C.cget("width")), int(C.cget("height")))/25
         x1_fixed = x1 + width
@@ -130,9 +134,9 @@ class DirectionsWindow(tk.Frame):
     
         if old_arrow_id:
             C.delete(old_arrow_id)
-        arrow_id = C.create_line(width, height, x1_fixed, y1_fixed, arrow=Tkinter.LAST, width = arrow_width)
+        arrow_id = C.create_line(width, height, x1_fixed, y1_fixed, arrow=tk.LAST, width = arrow_width)
         C.pack()
-        return arrow_id
+        self.old_arrow_id = arrow_id
 
 # create app
 app = Application()
