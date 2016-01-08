@@ -86,6 +86,15 @@ class TopBar(tk.Frame):
         self.quitButton = tk.Button(self, text='Quit', command=self.master.close_windows, font=self.font)
         self.quitButton.grid(row=0, column=0, sticky=tk.N+tk.S+tk.E+tk.W)
 
+        self.plusX = tk.Button(self, text='x+=10cm', command=self.move(10,0), font=self.font)
+        self.minusX = tk.Button(self, text='x-=10cm', command=self.move(-10,0), font=self.font)
+        self.plusY = tk.Button(self, text='y+=10cm', command=self.move(0,10), font=self.font)
+        self.minusY = tk.Button(self, text='y-=10cm', command=self.move(0,-10), font=self.font)
+        self.plusX.grid(row=1, column=0, sticky=tk.N+tk.S+tk.E+tk.W)
+        self.plusY.grid(row=1, column=1, sticky=tk.N+tk.S+tk.E+tk.W)
+        self.minusX.grid(row=2, column=0, sticky=tk.N+tk.S+tk.E+tk.W)
+        self.minusY.grid(row=2, column=1, sticky=tk.N+tk.S+tk.E+tk.W)
+
         self.Distance = Distance(self, font=self.font)
         self.Distance.grid(row=0, column=1, sticky=tk.N+tk.S+tk.E+tk.W)
 
@@ -97,6 +106,8 @@ class TopBar(tk.Frame):
         self.status.set(msg)
     def set_xyz(self, x, y, z):
         self.Distance.set_xyz(x, y, z)
+    def move(self, x, y):
+        return True
 
 class Distance(tk.Frame):
     def __init__(self, master, font):
@@ -137,8 +148,8 @@ class DirectionsWindow(tk.Frame):
         arrow_width = None
         width  = x0 if x0 != None else int(C.cget("width"))/2
         height = y0 if y0 != None else int(C.cget("height"))/2
-        x1 *= width*2
-        y1 *= height*2
+        x1 *= width/5
+        y1 *= height/5
         if arrow_width == None:
             arrow_width = min(int(C.cget("width")), int(C.cget("height")))/15
 
