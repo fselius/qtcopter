@@ -64,7 +64,7 @@ class Application(tk.Frame):
         self.set_xyz(x, y, z)
 
     def set_status(self, msg):
-        self.topbar.set_status(msg)
+        self.topbar.set_status(msg + ' ' * (len('Spiral search for target') - len(msg)))
     def callback_statemachine(self, msg):
         self.set_status(msg.data)
     def callback_image(self, msg):
@@ -258,6 +258,10 @@ else:
         app.directions.set_arrow(x,y)
         app.set_xyz(x, y, z)
         app.top.update()
+        msg_list = ['Fly to mission site', 'Center above target', 'Spiral search for target', 'Center above target', 'Center above target', 'Center above target', 'Roee', 'Vasily']
+        msg_num = random.randint(0, len(msg_list)-1)
+        app.set_status(msg_list[msg_num])
+
         time.sleep(1)
 app.mainloop()
 if ros:
