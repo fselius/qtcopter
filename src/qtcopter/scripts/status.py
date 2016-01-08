@@ -1,5 +1,6 @@
 #!/usr/bin/env python      
 import Tkinter as tk       
+import sys
 
 class Application(tk.Frame):
     def __init__(self, master=None):
@@ -40,20 +41,43 @@ class Application(tk.Frame):
     def close_windows(self):
         self.master.destroy()
 
+    def set_tf(self, x, y, z):
+        self.Distance.set_xyz(x, y, z) 
+    def callback_tf(self, msg):
+        is_good = lambda t: t.header.frame_id=='downward_cam_optical_frame' and\
+                            t.child_frame_id=='waypoint'
+        transforms = filter(is_good, msg.transforms)
+        if not transforms:
+            return
+        tr = transforms[0]
+        trl = tr.transform.translation
+        x, y, z = trl.x, trl.y, trl.z
+        self.set_tf(x, y, z)
+        #print x, y, z
+
 class Distance(tk.Frame):
     def __init__(self, master):
         tk.Frame.__init__(self, master)
         self.createStuff()
         self.grid()
     def createStuff(self):
-        self.x = tk.Label(self, text="dx=10m")
-        self.x.grid(row=0, column=0)
+        self.x = tk.StringVar()
+        self.xl = tk.Label(self, textvariable=self.x)
+        self.xl.grid(row=0, column=0)
         
-        self.y = tk.Label(self, text="dy=10m")
-        self.y.grid(row=0, column=1)
+        self.y = tk.StringVar()
+        self.yl = tk.Label(self, textvariable=self.y)
+        self.yl.grid(row=0, column=1)
         
-        self.z = tk.Label(self, text="dz=10m")
-        self.z.grid(row=0, column=2)
+        self.z = tk.StringVar()
+        self.zl = tk.Label(self, textvariable=self.z)
+        self.zl.grid(row=0, column=2)
+
+        self.set_xyz(0, 0, 0)
+    def set_xyz(self, x, y, z):
+        self.x.set('%.5f' % x)
+        self.y.set('%.5f' % y)
+        self.z.set('%.5f' % z)
 class DirectionsWindow(tk.Frame):
     def __init__(self, master):
         tk.Frame.__init__(self, master)
@@ -79,7 +103,33 @@ class DirectionsWindow(tk.Frame):
         self.x = event.x
         self.y = event.y
 
+# create app
 app = Application()
-app.master.title('Sample application')
-app.mainloop()
+app.master.title('Status monitor')
+ros = True
+if len(sys.argv) > 1:
+    if sys.argv[1] == '--noros':
+        ros=False
+if ros:
+    import rospy
+    # create ros node for listening
+    rospy.init_node('listener', anonymous=True)
+    # subscribe to all the needed topics
 
+    # camera image?
+    # /image
+    # tf ?
+
+
+    from tf.msg import tfMessage
+    tf_sub = rospy.Subscriber("/tf", tfMessage, app.callback_tf)
+    # status?
+    # height?
+app.mainloop()
+if ros:
+    tf_sub.unregister()
+    '''
+    # we quit after the window is closed
+    rospy.spin()
+    '''
+print 'bye!'
