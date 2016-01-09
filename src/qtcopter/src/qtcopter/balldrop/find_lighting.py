@@ -6,6 +6,7 @@ from math import ceil, floor
 import argparse
 
 from polarity_find import PolarityFind
+from scan_find import ScanFind
 #sys.path.append('..')
 #from DistanceFind import DistanceFind
 
@@ -29,6 +30,7 @@ def show_img(img):
 
 if __name__=='__main__':
     parser = argparse.ArgumentParser(description='Find gain and threshold for balldrop.')
+    parser.add_argument('--alg', default='polarity', choices=['polarity', 'scan'])
     parser.add_argument('--shutter', default=10, type=float, help='shutter time (10 ms default for indoor, 1-2 ms is fine for outside)')
     parser.add_argument('--output', '-o', help='save map to file')
     parser.add_argument('--show', action='store_true', help='show result map')
@@ -72,29 +74,39 @@ if __name__=='__main__':
         gains.append(gain)
         frames.append(f)
 
-    thresholds = np.linspace(0, 255, 20)
-    good_gains = []
-    for i, threshold in enumerate(thresholds):
-        finder = PolarityFind(True, 3, threshold=threshold)
-        line = [(finder.find_target(frame)[0] is not None) for gain, frame in zip(gains, frames)]
-        print 'threshold:', threshold, 'good:', sum(line)
-        good_gains.append(line)
+    if args.alg == 'polarity':
+        thresholds = np.linspace(0, 255, 20)
+        good_gains = []
+        for i, threshold in enumerate(thresholds):
+            finder = PolarityFind(True, 3, threshold=threshold)
+            line = [(finder.find_target(frame)[0] is not None) for gain, frame in zip(gains, frames)]
+            print 'threshold:', threshold, 'good:', sum(line)
+            good_gains.append(line)
 
 
-    good_gains = np.array(good_gains, dtype=np.uint8)
-    good_gains[good_gains==1] = 255
-    for i, gain in enumerate(gains):
-        x = np.average(np.nonzero(good_gains[:,i]))
-        good = sum(good_gains[:,i])/255
-        if good:
-            print 'gain:', gain, 'good:', good, 'avg:', x, thresholds[int(x)]
-        else:
-            print 'gain:', gain, 'good:', good
+        good_gains = np.array(good_gains, dtype=np.uint8)
+        good_gains[good_gains==1] = 255
+        for i, gain in enumerate(gains):
+            good = sum(good_gains[:,i])/255
+            if good:
+                x = np.average(np.nonzero(good_gains[:,i]))
+                print 'gain:', gain, 'good:', good, 'avg:', x, thresholds[int(x)]
+            else:
+                print 'gain:', gain, 'good:', good
 
-    ratio = 500./max(good_gains.shape)
-    good_gains = cv2.resize(good_gains, (0, 0), None, ratio, ratio)
-    if args.output:
-        cv2.imwrite(args.output, good_gains)
-        print 'wrote map to', args.output
-    show_img(good_gains)
+        ratio = 500./max(good_gains.shape)
+        good_gains = cv2.resize(good_gains, (0, 0), None, ratio, ratio)
+        if args.output:
+            cv2.imwrite(args.output, good_gains)
+            print 'wrote map to', args.output
+        if args.show:
+            show_img(good_gains)
+    elif args.alg == 'scan':
+        finder = ScanFind(True, 3)
+        for gain, frame in zip(gains, frames):
+            if finder.find_target(frame)[0] is not None:
+                print 'gain:', gain, 'good!'
+            else:
+                print 'gain:', gain, 'bad :('
+        raw_input()
 

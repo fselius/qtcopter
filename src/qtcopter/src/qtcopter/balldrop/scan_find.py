@@ -38,9 +38,10 @@ def dist(a, b):
     return math.sqrt((a[0]-b[0])**2 + (a[1]-b[1])**2)
 
 class Circle:
-    def __init__(self, center, radius):
+    def __init__(self, center, radius, matching_lines=None):
         self.center = center
         self.radius = radius
+        self.matching_lines = matching_lines
     def __repr__(self):
         return '<Circle (%.2f, %.2f) %.2f>' % (self.center[0], self.center[1], self.radius)
     def similar(self, other):
@@ -69,7 +70,8 @@ class ScanFind:
         return dist(a, b)<self._near_threshold
     def find_target(self, image):
         '''
-        Return the center of the target in pixel coordinates as tuple (x, y).
+        Return the center and the diameter of the target in pixel coordinates
+        as tuple ((x, y), diameter).
         '''
         # resize input image, assuming target takes at least 1/2 of the frame.
         self.resize = 800
@@ -79,10 +81,13 @@ class ScanFind:
         ratio = 1.*image.shape[0]/orig_shape[0]
 
         center, radius = self.find_circles(image)
-        print 'center:', repr(center)
         if center is None:
+            if self._debug:
+                print 'center:', (None, None)
             return (None, None)
-        return (float(center[0])/ratio, float(center[1])/ratio), float(radius)/ratio
+        if self._debug:
+            print 'center:', (float(center[0])/ratio, float(center[1])/ratio), 2*float(radius)/ratio
+        return (float(center[0])/ratio, float(center[1])/ratio), 2*float(radius)/ratio
 
     def find_circles(self, image):
         image = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
@@ -97,6 +102,7 @@ class ScanFind:
 
         if self._debug:
             show_img(can, wait=False, title='canny')
+            #show_img(can, wait=True, title='canny'+ str(random.randint(1, 10000000)))
 
         # get distance matrix (distance to nearest 1)
         distance = cv2.distanceTransform(255-can, cv.CV_DIST_L2, 3)
@@ -105,8 +111,13 @@ class ScanFind:
             return None, None
 
         # find horizontal and vertical lines
-        circles_hor = self.find_lines(distance, image)
-        circles_ver = self.find_lines(distance, image, transpose=True)
+        # look for one less ring, because we can't rely on the outer ring's
+        # edge being identified correctly. This happens because the outer ring
+        # is black. If the outer ring is close to the target's background
+        # border, i.e. the background is very narrow, while the ground is dark,
+        # we may not detect the edge correctly.
+        circles_hor = self.find_lines(distance, image, lines=self._number_of_rings-1)
+        circles_ver = self.find_lines(distance, image, lines=self._number_of_rings-1, transpose=True)
 
         # groupify horizontal found circles
         groups_hor = self.groupify(circles_hor)
@@ -116,7 +127,7 @@ class ScanFind:
             radius = np.mean([c.radius for c in group])
             circles_hor.append(Circle(center, radius))
 
-        # groupify horizontal found circles
+        # groupify vertical found circles
         groups_ver = self.groupify(circles_ver)
         circles_ver = []
         for group in groups_ver:
@@ -137,8 +148,9 @@ class ScanFind:
             group = [circle] + near
             center = np.mean([c.center for c in group], axis=0)
             radius = np.mean([c.radius for c in group])
-            good_circles.append(Circle(center, radius))
+            good_circles.append(Circle(center, radius, matching_lines=len(group)))
 
+        good_circles = sorted(good_circles, key=lambda c: c.matching_lines, reverse=True)
         if len(good_circles) > 1:
             # TODO: select circle with most "lines"
             print 'WARNING: multiple circles..'
@@ -147,12 +159,16 @@ class ScanFind:
             for circle in good_circles:
                 center = circle.center
                 radius = circle.radius
+                radius *= 1.0*self._number_of_rings/(self._number_of_rings-1)
                 cv2.circle(image, tuple(map(int, center)), 4, 255, -1)
                 cv2.circle(image, tuple(map(int, center)), int(radius), 255, 1)
             show_img(image, wait=False, title='scan lines')
 
         if len(good_circles) > 0:
-            return good_circles[0].center, good_circles[0].radius 
+            center, radius = good_circles[0].center, good_circles[0].radius
+            # we searched for one less ring, scale the radius
+            radius *= 1.0*self._number_of_rings/(self._number_of_rings-1)
+            return center, radius
         return (None, None)
 
     def groupify(self, circles):
@@ -207,53 +223,51 @@ class ScanFind:
             # remove intervals of length 1 (for when we catch border multiple times)
             d, di = d[d!=1], di[d!=1]
 
+            # TODO: filter out additional bad distances (too small/big),
+            # according to height?
+            if len(d) < lines:
+                # not enough lines, scan next line
+                continue
+
             d = d.astype(np.float)
             #print 'di, z, d:', di, z, d
 
             a0, a1, a2, a3, a4 = d[:-4], d[1:-3], d[2:-2], d[3:-1],d[4:]
-            avg = (a0+a1+a2+a3+a4)/6 # (a4 (a0) is twice the length)
+            #avg = (a0+a1+a2+a3+a4)/6 # (a4 (a0) is twice the length)
+
+            a_list = [d[i:i-(lines-1)] for i in range(lines-1)] + [d[lines-1:]]
+            avg = sum(a_list)/(1+lines) # inner line/circle is twice the size
+
+            a_list1 = [d[i:i-(lines-1)] for i in range(lines-1)] + [d[lines-1:]/2]
+            a_list2 = [d[:-lines+1]/2] + [d[i:i-(lines-1)] for i in range(1, lines-1)] + [d[lines-1:]]
             #print 'avg:', avg, 'low/high:', avg*0.8, avg*1.2
 
             # find 5 consecutive values that are around the average of the 5 values
             p = 1.2*avg
             p1 = avg/1.2
+
             # ratio 1: 1/1/1/1/2 (outer to inner ring)
-            
-            #print 'd:', d, 'p:', p, 'p1:', p1
-            #dd = (p1<d)&(d<p)
-            #rmid = dd[1:-3]&dd[2:-2]&dd[3:-1]
-            #r1 = dd[:-4] & rmid
-            #r2 = rmid&dd[4:]
+            #r1 = (p1<a0) & (a0<p) &\
+            #     (p1<a1) & (a1<p) &\
+            #     (p1<a2) & (a2<p) &\
+            #     (p1<a3) & (a3<p) &\
+            #     (p1<a4/2) & (a4/2<p)
 
-            '''
-            a02 = (2*p1<a0) & (a0<2*p)
-            a42 = (2*p1<a4) & (a4<2*p)
-            a0 = (p1<a0) & (a0<p)
-            a1 = (p1<a1) & (a1<p)
-            a2 = (p1<a2) & (a2<p)
-            a3 = (p1<a3) & (a3<p)
-            a4 = (p1<a4) & (a4<p)
-
-            r1 = a0&a1&a2&a3&a42
-            r2 = a02&a1&a2&a3&a4
-            '''
-
-            r1 = (p1<a0) & (a0<p) &\
-                 (p1<a1) & (a1<p) &\
-                 (p1<a2) & (a2<p) &\
-                 (p1<a3) & (a3<p) &\
-                 (p1<a4/2) & (a4/2<p)
+            r1 = (p1 < a_list1) & (a_list1 < p)
+            r1 = np.all(r1, axis=0)
 
             # ratio 2: 2/1/1/1/1 (inner to outer ring)
-            r2 = (p1<a0/2) & (a0/2<p) &\
-                 (p1<a1) & (a1<p) &\
-                 (p1<a2) & (a2<p) &\
-                 (p1<a3) & (a3<p) &\
-                 (p1<a4) & (a4<p)
+            #r2 = (p1<a0/2) & (a0/2<p) &\
+            #     (p1<a1) & (a1<p) &\
+            #     (p1<a2) & (a2<p) &\
+            #     (p1<a3) & (a3<p) &\
+            #     (p1<a4) & (a4<p)
+            r2 = (p1 < a_list2) & (a_list2 < p)
+            r2 = np.all(r2, axis=0)
 
             for i in r1.nonzero()[0]:
                 start = di[i]
-                radius = avg[i]*5
+                radius = avg[i]*lines
                 # TODO: what's the best estimate for the center?
                 center = (start+radius, y)
                 line_end = (int(start), int(y))
@@ -268,8 +282,8 @@ class ScanFind:
                     cv2.circle(image, tuple(map(int, center)), 2, 255, -1)
 
             for i in r2.nonzero()[0]:
-                end = di[i+4]+d[i+4]
-                radius = avg[i]*5
+                end = di[i+lines-1]+d[i+lines-1]
+                radius = avg[i]*lines
                 center = (end-radius, y)
                 line_end = (int(end), int(y))
                 if transpose:
@@ -282,8 +296,8 @@ class ScanFind:
                     cv2.line(image, tuple(map(int, center)), line_end, (255, 0, 0), 1)
                     cv2.circle(image, tuple(map(int, center)), 2, (255, 0, 0), -1)
 
-        #if self._debug:
-        #    show_img(image, wait=False, title='debug2?')
+        if self._debug:
+            show_img(image, wait=False, title='debug2?')
         return circles
 
     def check_circles(self, distance, center, img):
