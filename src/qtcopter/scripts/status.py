@@ -8,14 +8,18 @@ import time
 class Application(tk.Frame):
     def __init__(self, master=None):
         tk.Frame.__init__(self, master)
+        self.big_font = tkFont.Font(family="Helvetica", size=32)
         #self.pack(fill=tk.BOTH, expand=1)
-        self.grid(sticky=tk.E+tk.W)
+        self.grid(sticky=tk.N+tk.S+tk.E+tk.W)
         self.createWidgets()
-        #self.direction_window()
-    def direction_window(self):
-        self.directions = tk.Toplevel(self.master)
-        self.app = DirectionsWindow(self.directions)
-        self.app.pack()
+
+        # it would be nice if app closed on ros quit, but this doesn't work
+        #self.after(500, self.check_ros)
+    def check_ros(self):
+        if rospy.is_shutdown():
+            self.close_windows()
+        else:
+            self.after(500, self.check_ros)
     def createWidgets(self):
         # make main window resizable
         top = self.winfo_toplevel()
@@ -34,15 +38,14 @@ class Application(tk.Frame):
         self.Distance = Distance(self)
         self.Distance.grid(row=0, column=1)
         
-        self.Status = tk.Label(self, text="some status", bg="red")
+        self.status = tk.StringVar()
+        self.statusl = tk.Label(self, textvariable=self.status, font=self.big_font, bg="red")
         ##self.Status.pack(fill=tk.BOTH, side=tk.LEFT)
-        self.Status.grid(row=0, column=2, sticky=tk.N+tk.S+tk.E+tk.W)
+        self.statusl.grid(row=0, column=2, sticky=tk.N+tk.S+tk.E+tk.W)
 
         self.directions = DirectionsWindow(self)
         self.directions.grid(row=1, columnspan=3)
         top.update()
-    def setMissionStatus(self, status):
-        self.mission_status = status
     def close_windows(self):
         self.master.destroy()
 
@@ -58,8 +61,14 @@ class Application(tk.Frame):
         tr = transforms[0]
         trl = tr.transform.translation
         x, y, z = trl.x, trl.y, trl.z
+        x = -x
         self.set_tf(x, y, z)
         #print x, y, z
+
+    def set_status(self, msg):
+        self.status.set(msg)
+    def callback_statemachine(self, msg):
+        self.set_status(msg.data)
 
 class Distance(tk.Frame):
     def __init__(self, master):
@@ -170,9 +179,18 @@ if ros:
     # tf ?
 
 
+    # tf
     from tf.msg import tfMessage
     tf_sub = rospy.Subscriber("/tf", tfMessage, app.callback_tf)
     # status?
+    from std_msgs.msg import String
+    statemachine_sub = rospy.Subscriber("/statemachine", String,
+                                        app.callback_statemachine)
+
+    # close app on shutdown :)
+    # doesn't work :/
+    #rospy.on_shutdown(app.close_windows)
+
     # height?
 else:
     for i in xrange(50):
@@ -186,6 +204,7 @@ else:
 app.mainloop()
 if ros:
     tf_sub.unregister()
+    statemachine_sub.unregister()
     '''
     # we quit after the window is closed
     rospy.spin()
