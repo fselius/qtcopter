@@ -2,7 +2,7 @@
 
 import math
 import rospy
-from mavros_extras.msg import OpticalFlowRad
+from mavros_msgs.msg import OpticalFlowRad
 from std_msgs.msg import Float64
 from qtcopter.msg import controller_msg
 #from qtcopter.srv import UpdateWaypointsSrv
@@ -196,8 +196,8 @@ class FlowHandler:
         #    print rospy.logerr('sum_angle != theta!! (%.6f != %.6f) pi' % (self.sum_angle%(2*math.pi), theta%(2*math.pi)))
 
         rot = tf.transformations.quaternion_from_euler(0, 0, theta)
-        rospy.loginfo('Publish flow delta: x {0}, y {1}, z {2}, theta {3} pi'.format(
-                                        my_x, my_y, z, theta/math.pi))
+        #rospy.loginfo('Publish flow delta: x {0}, y {1}, z {2}, theta {3} pi'.format(
+        #                                my_x, my_y, z, theta/math.pi))
         #print 'SEND FLOW', time()
         self._publisher.sendTransform((my_x, my_y, z),
                                       rot,

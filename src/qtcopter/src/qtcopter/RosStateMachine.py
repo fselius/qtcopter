@@ -1,6 +1,7 @@
 from . import Userdata, StateMachine, Camera, OpticalFlow
 from cv_bridge import CvBridge, CvBridgeError
 from sensor_msgs.msg import Range, Image
+from std_msgs.msg import String
 from qtcopter.msg import controller_msg
 from message_filters import ApproximateTimeSynchronizer, Subscriber
 import rospy
@@ -20,6 +21,7 @@ class RosStateMachine(StateMachine):
         self.__debug_pub = rospy.Publisher('/debug_image', Image, queue_size=1)
         #self.__pid_input_pub = rospy.Publisher('/pid_input', controller_msg,
         #                                       queue_size=1)
+        self.__state_pub = rospy.Publisher('/statemachine', String, queue_size=1)
 
         if camera is None:
             self.__camera = Camera.from_ros()
@@ -48,6 +50,7 @@ class RosStateMachine(StateMachine):
         """
         Receives ROS messages and advances the state machine.
         """
+        self.__state_pub.publish(self.current_state)
         if self.current_state == self.FINAL_STATE:
             rospy.loginfo('Final state reached.')
             rospy.signal_shutdown('Final state reached.')

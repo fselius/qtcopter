@@ -1,5 +1,6 @@
 <launch>
-    <remap from="/px4flow/px4flow/ground_distance" to="/height" />
+    <!-- doesn't work in this scope :) -->
+    <!--remap from="/px4flow/px4flow/ground_distance" to="/height" /-->
     <!-- px4flow -->
     <include file="$(find qtcopter)/launch/px4flow.launch" />
     <node pkg="qtcopter" type="flow" name="flow_node" respawn="true"/>
