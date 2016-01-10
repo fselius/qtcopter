@@ -5,6 +5,10 @@ import random
 import sys
 import time
 
+from PIL import Image
+from PIL import ImageTk as itk
+import numpy as np
+
 class Application(tk.Frame):
     def __init__(self, master=None):
         tk.Frame.__init__(self, master)
@@ -45,6 +49,9 @@ class Application(tk.Frame):
 
         self.directions = DirectionsWindow(self)
         self.directions.grid(row=1, columnspan=3)
+
+        self.image = ImageView(self)
+        self.image.grid(row=2, columnspan=3)
         top.update()
     def close_windows(self):
         self.master.destroy()
@@ -69,9 +76,12 @@ class Application(tk.Frame):
         self.set_status(msg.data)
     def callback_image(self, msg):
         width, height, data = msg.width, msg.height, msg.data
-        #print width, height, '%r' % data[0], len(data)
+        img = np.fromstring(msg.data, dtype=np.uint8).reshape(height, width, 3)
+        self.image.set_img(img)
     def callback_debug_image(self, msg):
         width, height, data = msg.width, msg.height, msg.data
+        img = np.fromstring(msg.data, dtype=np.uint8).reshape(height, width, 3)
+        self.image.set_debug_img(img)
 
 class Distance(tk.Frame):
     def __init__(self, master):
@@ -104,26 +114,6 @@ class DirectionsWindow(tk.Frame):
         self.canvas = tk.Canvas(self)
         self.canvas.pack(fill="both", expand="1")
         self.set_arrow(100,200)
-        #self.canvas.create_rectangle(50, 25, 150, 75, fill="bisque", tags="r1")
-        #self.canvas.create_line(0,0, 50, 25, arrow="last", tags="to_r1")
-        #self.canvas.bind("<B1-Motion>", self.move_box)
-        #self.canvas.bind("<ButtonPress-1>", self.start_move)
-    def move_box(self, event):
-        pass
-        #deltax = event.x - self.x
-        #deltay = event.y - self.y
-        #self.canvas.move("r1", deltax, deltay)
-        #coords = self.canvas.coords("to_r1")
-        #coords[2] += deltax
-        #coords[3] += deltay
-        #self.canvas.coords("to_r1", *coords)
-        #self.x = event.x
-        #self.y = event.y
-
-    def start_move(self, event):
-        pass
-        #self.x = event.x
-        #self.y = event.y
     def set_arrow(self, x1, y1):
         C = self.canvas
         x0 = None
@@ -164,6 +154,43 @@ class DirectionsWindow(tk.Frame):
         arrow_id = C.create_line(width, height, x1_fixed, y1_fixed, arrow=tk.LAST, width = arrow_width)
         C.pack()
 
+class ImageView(tk.Frame):
+    def __init__(self, master):
+        tk.Frame.__init__(self, master)
+        self.canvas1 = tk.Canvas(self, width=1280/4, height=960/4)
+        self.canvas1.grid(row=0, column=0)
+        self.canvas2 = tk.Canvas(self, width=1280/4, height=960/4)
+        self.canvas2.grid(row=0, column=1)
+    def set_img(self, img):
+        img2 = img.copy()
+        img2[:,:,0] = img[:,:,2]
+        img2[:,:,1] = img[:,:,1]
+        img2[:,:,2] = img[:,:,0]
+        
+        img = img2
+        im = Image.fromarray(img)
+        im = im.resize((1280/4, 960/4))
+        pi = itk.PhotoImage(im)
+        self.pi1 = pi
+        self.canvas1.delete('all')
+        self.canvas1.create_image(1280/4/2, 960/4/2, image=self.pi1)
+        #self.canvas1.grid()
+    def set_debug_img(self, img):
+        img2 = img.copy()
+        img2[:,:,0] = img[:,:,2]
+        img2[:,:,1] = img[:,:,1]
+        img2[:,:,2] = img[:,:,0]
+        
+        img = img2
+        im = Image.fromarray(img, 'RGB')
+        im = im.resize((1280/4, 960/4), Image.ANTIALIAS)
+        pi = itk.PhotoImage(im)
+        self.pi2 = pi
+        self.canvas2.delete('all')
+        self.canvas2.create_image(1280/4/2, 960/4/2, image=self.pi2)
+        #self.canvas2.grid()
+        
+
 # create app
 app = Application()
 app.master.title('Status monitor')
@@ -179,9 +206,9 @@ if ros:
 
     # camera image?
     # /image
-    from sensor_msgs.msg import Image
-    image_sub = rospy.Subscriber("/image", Image, app.callback_image)
-    debug_image_sub = rospy.Subscriber("/debug_image", Image, app.callback_debug_image)
+    from sensor_msgs.msg import Image as Image_msg
+    image_sub = rospy.Subscriber("/image", Image_msg, app.callback_image)
+    debug_image_sub = rospy.Subscriber("/debug_image", Image_msg, app.callback_debug_image)
 
     # tf
     from tf.msg import tfMessage
