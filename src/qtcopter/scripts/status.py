@@ -63,12 +63,15 @@ class Application(tk.Frame):
         x, y, z = trl.x, trl.y, trl.z
         x = -x
         self.set_tf(x, y, z)
-        #print x, y, z
-
     def set_status(self, msg):
         self.status.set(msg)
     def callback_statemachine(self, msg):
         self.set_status(msg.data)
+    def callback_image(self, msg):
+        width, height, data = msg.width, msg.height, msg.data
+        #print width, height, '%r' % data[0], len(data)
+    def callback_debug_image(self, msg):
+        width, height, data = msg.width, msg.height, msg.data
 
 class Distance(tk.Frame):
     def __init__(self, master):
@@ -176,8 +179,9 @@ if ros:
 
     # camera image?
     # /image
-    # tf ?
-
+    from sensor_msgs.msg import Image
+    image_sub = rospy.Subscriber("/image", Image, app.callback_image)
+    debug_image_sub = rospy.Subscriber("/debug_image", Image, app.callback_debug_image)
 
     # tf
     from tf.msg import tfMessage
@@ -203,6 +207,8 @@ else:
         time.sleep(5)
 app.mainloop()
 if ros:
+    image_sub.unregister()
+    debug_image_sub.unregister()
     tf_sub.unregister()
     statemachine_sub.unregister()
     '''
