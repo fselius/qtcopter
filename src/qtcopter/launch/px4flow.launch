@@ -1,31 +1,33 @@
 <launch>
-	<!-- vim: set ft=xml noet : -->
-	<!-- Based on mavros_extras/px4flow.launch -->
-	<!-- Based on mavros/node.launch -->
-	<!-- Launch script for PX4Flow -->
+    <!-- vim: set ft=xml noet : -->
+    <!-- Based on mavros_extras/px4flow.launch -->
+    <!-- Based on mavros/node.launch -->
+    <!-- Launch script for PX4Flow -->
 
     <rosparam ns="px4flow">
         <!-- Should we use zero quality reading -->
         allow_zero_quality: True
     </rosparam>
 
-	<arg name="fcu_url" default="serial:///dev/ttyACM0:921600" />
-	<arg name="gcs_url" default="" />
-	<arg name="tgt_system" default="81" />
-	<arg name="tgt_component" default="50" />
+    <arg name="fcu_url" default="serial:///dev/ttyACM0:921600" />
+    <arg name="gcs_url" default="" />
+    <arg name="tgt_system" default="81" />
+    <arg name="tgt_component" default="50" />
 
-	<node pkg="mavros" type="mavros_node" name="px4flow" required="true" clear_params="true" output="screen">
-		<param name="fcu_url" value="$(arg fcu_url)" />
-		<param name="gcs_url" value="$(arg gcs_url)" />
-		<param name="target_system_id" value="$(arg tgt_system)" />
-		<param name="target_component_id" value="$(arg tgt_component)" />
+    <node pkg="mavros" type="mavros_node" name="px4flow" required="true" clear_params="true" output="screen">
+        <param name="fcu_url" value="$(arg fcu_url)" />
+        <param name="gcs_url" value="$(arg gcs_url)" />
+        <param name="target_system_id" value="$(arg tgt_system)" />
+        <param name="target_component_id" value="$(arg tgt_component)" />
 
-		<!-- remap mavlink bridge topics -->
-		<remap from="/mavlink/to" to="/px4flow/mavlink_to" />
-		<remap from="/mavlink/from" to="/px4flow/mavlink_from" />
+        <!-- remap mavlink bridge topics -->
+        <remap from="/mavlink/to" to="/px4flow/mavlink_to" />
+        <remap from="/mavlink/from" to="/px4flow/mavlink_from" />
+        <!-- remap to use px4flow height -->
+        <remap from="/px4flow/px4flow/ground_distance" to="/height" />
 
-		<!-- load blacklist, config -->
-		<rosparam command="load" file="$(find qtcopter)/config/px4flow_pluginlists.yaml" />
-		<rosparam command="load" file="$(find qtcopter)/config/px4flow_config.yaml" />
-	</node>
+        <!-- load blacklist, config -->
+        <rosparam command="load" file="$(find qtcopter)/config/px4flow_pluginlists.yaml" />
+        <rosparam command="load" file="$(find qtcopter)/config/px4flow_config.yaml" />
+</node>
 </launch>

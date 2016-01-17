@@ -12,7 +12,7 @@ import numpy as np
 
 
 class PolarityFind:
-    def __init__(self, center_black, number_of_rings, threshold, debug=True):
+    def __init__(self, center_black, number_of_rings, threshold, debug=False):
         self._center_black = center_black
         self._number_of_rings = number_of_rings
         self._debug = debug
@@ -73,6 +73,7 @@ class PolarityFind:
             cv2.drawContours(image, contours, -1, (0, 0, 255), 5)
             cv2.drawContours(image, [contours[i] for i in leaf_contours_idx], -1, (0, 255, 0), 4)
             cv2.drawContours(image, [contours[i] for i in contours_idx], -1, (255, 0, 0), 3)
+            show_img(image)
 
         # Go up and check polarity
         # FIXME: Until leaf_contours_idx is fixed, go over all the contours.
@@ -116,7 +117,7 @@ if __name__ == '__main__':
     image = cv2.imread(sys.argv[1])
 
     import cProfile
-    finder = PolarityFind(True, 3, 100, debug=False)
+    finder = PolarityFind(True, 3, 100, debug=True)
     center, size = finder.find_target(image)
     #cProfile.run("center, size = finder.find_target(image)")
     print 'center:', center

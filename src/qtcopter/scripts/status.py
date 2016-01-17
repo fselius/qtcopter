@@ -60,9 +60,7 @@ class Application(tk.Frame):
         tr = transforms[0]
         trl = tr.transform.translation
         x, y, z = trl.x, trl.y, trl.z
-        x = -x
         self.set_xyz(x, y, z)
-
     def set_status(self, msg):
         self.topbar.set_status(msg + ' ' * (len('Spiral search for target') - len(msg)))
     def callback_statemachine(self, msg):
@@ -82,14 +80,22 @@ class TopBar(tk.Frame):
     def __init__(self, master, font):
         tk.Frame.__init__(self, master)
         self.font = font
+
+        if ros:
+            import tf
+            self._listener = tf.TransformListener()
+            self._publisher = tf.TransformBroadcaster()
+            self._flow_frame = 'downward_cam_optical_frame'
+
+
         # quit button | distance to target | status text
         self.quitButton = tk.Button(self, text='Quit', command=self.master.close_windows, font=self.font)
         self.quitButton.grid(row=0, column=0, sticky=tk.N+tk.S+tk.E+tk.W)
 
-        self.plusX = tk.Button(self, text='x+=10cm', command=self.move(10,0), font=self.font)
-        self.minusX = tk.Button(self, text='x-=10cm', command=self.move(-10,0), font=self.font)
-        self.plusY = tk.Button(self, text='y+=10cm', command=self.move(0,10), font=self.font)
-        self.minusY = tk.Button(self, text='y-=10cm', command=self.move(0,-10), font=self.font)
+        self.plusX  = tk.Button(self, text='left 10cm', command=lambda:self.move(0.10,0), font=self.font)
+        self.minusX = tk.Button(self, text='right 10cm', command=lambda:self.move(-0.10,0), font=self.font)
+        self.plusY  = tk.Button(self, text='fwd 10cm', command=lambda:self.move(0,0.10), font=self.font)
+        self.minusY = tk.Button(self, text='bck 10cm', command=lambda:self.move(0,-0.10), font=self.font)
         self.plusX.grid(row=1, column=0, sticky=tk.N+tk.S+tk.E+tk.W)
         self.plusY.grid(row=1, column=1, sticky=tk.N+tk.S+tk.E+tk.W)
         self.minusX.grid(row=2, column=0, sticky=tk.N+tk.S+tk.E+tk.W)
@@ -107,7 +113,26 @@ class TopBar(tk.Frame):
     def set_xyz(self, x, y, z):
         self.Distance.set_xyz(x, y, z)
     def move(self, x, y):
-        return True
+        import tf, rospy
+        if not ros:
+            return
+        try:
+            ((my_x, my_y, z), rot) = self._listener.lookupTransform(self._flow_frame,
+                                                            'waypoint',
+                                                            rospy.Time(0))
+        except (tf.LookupException, tf.ConnectivityException, tf.ExtrapolationException), e:
+            print 'Exception in handle_optical_flow_rad:lookupTransform(\'waypoint\'):'
+            print str(e)
+            return
+
+        my_x -= x
+        my_y -= y
+
+        self._publisher.sendTransform((my_x, my_y, z),
+                                      rot,
+                                      rospy.Time.now(),
+                                      'waypoint',
+                                      self._flow_frame)
 
 class Distance(tk.Frame):
     def __init__(self, master, font):
@@ -218,19 +243,21 @@ class ImageView(tk.Frame):
         #self.canvas2.grid()
         
 
-# create app
-app = Application()
-app.master.title('Status monitor')
 ros = True
 if len(sys.argv) > 1:
     if sys.argv[1] == '--noros':
         ros=False
+
 if ros:
     import rospy
     # create ros node for listening
     rospy.init_node('listener', anonymous=True)
-    # subscribe to all the needed topics
 
+    # create app
+    app = Application()
+    app.master.title('Status monitor')
+
+    # subscribe to all the needed topics
     # camera image?
     # /image
     from sensor_msgs.msg import Image as Image_msg
@@ -251,6 +278,9 @@ if ros:
 
     # height?
 else:
+    # create app
+    app = Application()
+    app.master.title('Status monitor')
     for i in xrange(50):
         x = random.uniform(-2,2)
         y = random.uniform(-2,2)

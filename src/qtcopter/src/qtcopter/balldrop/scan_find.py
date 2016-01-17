@@ -74,7 +74,7 @@ class ScanFind:
         as tuple ((x, y), diameter).
         '''
         # resize input image, assuming target takes at least 1/2 of the frame.
-        self.resize = 800
+        self.resize = 400
         orig_shape = image.shape[:2]
         while min(image.shape[:2]) > self.resize:
             image = cv2.pyrDown(image)
@@ -336,7 +336,7 @@ if __name__ == '__main__':
 
     if args.cam:
         import cProfile
-        finder = ScanFind(True, 3, debug=args.debug)
+        finder = ScanFind(True, 5, debug=args.debug)
         for image in args.cam:
             image = cv2.imread(image)
             center, size = finder.find_target(image)
@@ -346,11 +346,11 @@ if __name__ == '__main__':
                 cv2.circle(image, tuple(map(int, center)), 10, (0, 255, 255), -1)
                 cv2.circle(image, tuple(map(int, center)), int(size), (0, 255, 255), 3)
                 if not args.quite:
-                    show_img(image)
+                    show_img(image, wait=False)
             else:
                 print 'could not find target'
                 if not args.quite:
-                    show_img(image)
+                    show_img(image, wait=False)
     else:
         c = PTGreyCamera()
         # set manual values
@@ -362,7 +362,7 @@ if __name__ == '__main__':
         c.print_infos()
 
         c.start_capture()
-        finder = ScanFind(True, 3, debug=args.debug)
+        finder = ScanFind(True, 5, debug=args.debug)
         
         try:
             while True:

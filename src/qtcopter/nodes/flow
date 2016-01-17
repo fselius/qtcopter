@@ -7,23 +7,27 @@ from std_msgs.msg import Float64
 from qtcopter.msg import controller_msg
 #from qtcopter.srv import UpdateWaypointsSrv
 from sensor_msgs.msg import Range
+from geometry_msgs.msg import TransformStamped
 
 import tf
 from time import time, sleep
+
+from threading import Lock
 
 class FlowHandler:
     " Handle flow (px4flow OPTICAL_FLOW_RAD) messages to update location "
     def __init__(self):
         self._listener = tf.TransformListener()
         self._publisher = tf.TransformBroadcaster()
+        self._update_lock = Lock()
         #self._flowUpdateWayPointsSrv = rospy.Service('/flow/update_waypoints', UpdateWaypointsSrv, self._UpdateWaypointsRequestHandler)
         tr = tf.Transformer()
 
         # TODO: make a frame for the flow
         self._flow_frame = 'downward_cam_optical_frame'
-        self.__pid_input_pub = rospy.Publisher('/pid_input', controller_msg,
-                                               queue_size=1)
+        self.__pid_input_pub = rospy.Publisher('/pid_input', controller_msg, queue_size=1)
         #self.__height_pub = rospy.Publisher('/height_flow', Range, queue_size=1)
+        #self.__flow_sum_pub = rospy.Publisher("/flow_sum", TransformStamped, queue_size=1)
         self.last_good = 0
         self.last_quality_warn = 0
         self.allow_zero_quality = rospy.get_param('px4flow/allow_zero_quality', False)
@@ -31,6 +35,9 @@ class FlowHandler:
         self.previous_angle = None
         self.current_angle = None
         self.sum_angle = 0
+        # TODO: flow_sum is not initialized correctly if previous flow_sum is available.
+        # flow_sum is mainly for FlyToBaseFlow
+        #self.flow_sum = [0, 0]
         #self.lpf = [2,2,2,2,2]
         # check if we already have transformation (if flow node restarted)
         try:
@@ -94,8 +101,8 @@ class FlowHandler:
         #print 'NEW ANGLE:', self.current_angle/math.pi
     def handle_optical_flow_rad(self, data):
         if data.quality == 0:
-            if self.last_quality_warn+1 < time():
-                # only print warning every second
+            if self.last_quality_warn+5 < time():
+                # only print warning every 5 seconds
                 self.last_quality_warn = time()
                 rospy.logwarn('Flow quality = 0 for %d seconds, allow_zero_quality=%r, current_angle=%r'\
                             % (time()-self.last_good, self.allow_zero_quality, self.current_angle))
@@ -105,10 +112,12 @@ class FlowHandler:
             self.last_good = time()
 
         if data.distance == 0:
-            if self.previous_height is not None:
+            if self.previous_height is None:
+                rospy.logwarn('Flow distance (height) = 0 and no previous height => No delta publish.')
+                return
+            else:
                 rospy.logwarn('Flow distance (height) = 0, using previous height %r' % (self.previous_height, ))
                 data.distance = self.previous_height
-
         #lpf_average_distance = sum(self.lpf) / float(len(lpf))
         #lpf_curent_distance = data.distance
         #if average distance * 1.1 < data.distance or average_distance * 0.9 > data.distance:
@@ -128,117 +137,125 @@ class FlowHandler:
         # If a new transform to the waypoint is submitted after we sampled it,
         # and before we added the delta to it, we will overwrite the new value
         # with the previous one (+delta). This is bad.
-        # get latest (current) transformation
-        try:
-            ((my_x, my_y, z), rot) = self._listener.lookupTransform(self._flow_frame,
-                                                            'waypoint',
-                                                            rospy.Time(0))
-        except (tf.LookupException, tf.ConnectivityException, tf.ExtrapolationException), e:
-            rospy.logwarn('Exception in handle_optical_flow_rad:lookupTransform(\'waypoint\'):')
-            rospy.logwarn(str(e))
-            return
+        with self._update_lock:
+            # get latest (current) transformation
+            try:
+                ((my_x, my_y, z), rot) = self._listener.lookupTransform(self._flow_frame,
+                                                                'waypoint',
+                                                                rospy.Time(0))
+            except (tf.LookupException, tf.ConnectivityException, tf.ExtrapolationException), e:
+                rospy.logwarn('Exception in handle_optical_flow_rad:lookupTransform(\'waypoint\'):')
+                rospy.logwarn(str(e))
+                return
 
+            #transform the old transform according to old angle
+            if self.previous_angle is None:
+                self.previous_angle = compass_hdg_rad
+            previous_angle = self.previous_angle
 
-        #transform the old transform according to old angle
-        if self.previous_angle is None:
-            self.previous_angle = compass_hdg_rad
-        previous_angle = self.previous_angle
+            #calculate the addition to the compass axes system
+            cosa = math.cos(previous_angle)
+            sina = math.sin(previous_angle)
 
-        #calculate the addition to the compass axes system
-        cosa = math.cos(previous_angle)
-        sina = math.sin(previous_angle)
+            x = my_x * cosa + my_y * sina
+            y = -my_x * sina + my_y * cosa
 
-        x = my_x * cosa + my_y * sina
-        y = -my_x * sina + my_y * cosa
+            # calculate flow addition in my axes system
+            #my_dx = data.integrated_x*data.distance
+            #my_dy = data.integrated_y*data.distance
+            # y is forward, x left,
+            my_dx =  data.integrated_y*data.distance
+            my_dy =  data.integrated_x*data.distance
 
-        # calculate flow addition in my axes system
-        my_dx = data.integrated_x*data.distance
-        my_dy = data.integrated_y*data.distance
+            #calculate the addition to the compass axes system
+            cosa = math.cos(compass_hdg_rad)
+            sina = math.sin(compass_hdg_rad)
 
-        #calculate the addition to the compass axes system
-        cosa = math.cos(compass_hdg_rad)
-        sina = math.sin(compass_hdg_rad)
+            dx = my_dx * cosa + my_dy * sina
+            dy = -my_dx * sina + my_dy * cosa
 
-        dx = my_dx * cosa + my_dy * sina
-        dy = -my_dx * sina + my_dy * cosa
+            if self.previous_height is None:
+                self.previous_height = data.distance
 
-        if self.previous_height is None:
+            dz = data.distance - self.previous_height
             self.previous_height = data.distance
 
-        dz = data.distance - self.previous_height
-        self.previous_height = data.distance
+            dangle = compass_hdg_rad - self.previous_angle
+            self.sum_angle += dangle
+            #print 'sum dangle:', self.sum_angle/math.pi, 'pi'
+            self.previous_angle = compass_hdg_rad
+            #print 'prev angle:', self.previous_angle
 
-        dangle = compass_hdg_rad - self.previous_angle
-        self.sum_angle += dangle
-        #print 'sum dangle:', self.sum_angle/math.pi, 'pi'
-        self.previous_angle = compass_hdg_rad
-        #print 'prev angle:', self.previous_angle
+            z += dz
+            x += dx
+            y += dy
 
-        z += dz
-        x += dx
-        y += dy
+            #calculate the values in my axes system.
+            #cosMinusa = cosa
+            #sinMinusa = -sina
 
-        #calculate the values in my axes system.
-        #cosMinusa = cosa
-        #sinMinusa = -sina
-
-        my_x = x * cosa - y * sina
-        my_y = x * sina + y * cosa
+            my_x = x * cosa - y * sina
+            my_y = x * sina + y * cosa
 
 
-        # publish (my_x, my_y, z)
-        theta = tf.transformations.euler_from_quaternion(rot)[2]
-        #print 'old theta:', theta/math.pi, 'pi'
-        theta += dangle
-        #print 'theta:', theta/math.pi, 'pi'
+            # publish (my_x, my_y, z)
+            theta = tf.transformations.euler_from_quaternion(rot)[2]
+            #print 'old theta:', theta/math.pi, 'pi'
+            theta += dangle
+            #print 'theta:', theta/math.pi, 'pi'
 
-        #if abs(self.sum_angle%(2*math.pi) - theta%(2*math.pi))%(2*math.pi) > 1e-5:
-        #    print rospy.logerr('sum_angle != theta!! (%.6f != %.6f) pi' % (self.sum_angle%(2*math.pi), theta%(2*math.pi)))
+            #if abs(self.sum_angle%(2*math.pi) - theta%(2*math.pi))%(2*math.pi) > 1e-5:
+            #    print rospy.logerr('sum_angle != theta!! (%.6f != %.6f) pi' % (self.sum_angle%(2*math.pi), theta%(2*math.pi)))
 
-        rot = tf.transformations.quaternion_from_euler(0, 0, theta)
-        #rospy.loginfo('Publish flow delta: x {0}, y {1}, z {2}, theta {3} pi'.format(
-        #                                my_x, my_y, z, theta/math.pi))
-        #print 'SEND FLOW', time()
-        self._publisher.sendTransform((my_x, my_y, z),
-                                      rot,
-                                      rospy.Time.now(),
-                                      'waypoint',
-                                      self._flow_frame)
-        #print 'SENT FLOW', time()
-        # publish to PID
-        msg = controller_msg()
-        # The following is correct with the sonar further away from the drone.
-        # If the sonar is closer, need to multiple my_y, my_x by -1.
-        msg.x = my_y
-        msg.y = my_x
-        msg.z = z
-        msg.t = theta
-        self.__pid_input_pub.publish(msg)
-        # TODO: The following sleep is because sometimes lookupTrasform() just
-        # after sendTransform() will get the previous value.. sleep fixes it.
-        # we need to find a real solution for this.
-        sleep(0.01)
+            rot = tf.transformations.quaternion_from_euler(0, 0, theta)
+            #rospy.loginfo('Publish flow delta: x {0}, y {1}, z {2}, theta {3} pi'.format(
+            #                                my_x, my_y, z, theta/math.pi))
+            #print 'SEND FLOW', time()
+            self._publisher.sendTransform((my_x, my_y, z),
+                                          rot,
+                                          rospy.Time.now(),
+                                          'waypoint',
+                                          self._flow_frame)
+            #print 'SENT FLOW', time()
+            # publish to PID
+            msg = controller_msg()
+            # The following is correct with the sonar further away from the drone.
+            # If the sonar is closer, need to multiple my_y, my_x by -1.
+            msg.x = my_y
+            msg.y = my_x
+            msg.z = z
+            msg.t = theta
+            self.__pid_input_pub.publish(msg)
+            # TODO: The following sleep is because sometimes lookupTrasform() just
+            # after sendTransform() will get the previous value.. sleep fixes it.
+            # we need to find a real solution for this.
+            sleep(0.01)
 
-        #r = Range()
-        #r.range = data.distance
-        #rospy.loginfo('Publish flow height: {0} meters'.format(r.range))
-        #self.__height_pub.publish(r)
+            #r = Range()
+            #r.range = data.distance
+            #rospy.loginfo('Publish flow height: {0} meters'.format(r.range))
+            #self.__height_pub.publish(r)
 
-        '''
-        # TODO: we can calculate heading direction from dx/dy.
-        if data.integration_time_us != 0:
-            # speed
-            speed_x = data.integrated_x/(1.0*data.integration_time_us/1e6)*data.distance
-            speed_y = data.integrated_y/(1.0*data.integration_time_us/1e6)*data.distance
+            '''
+            # TODO: we can calculate heading direction from dx/dy.
+            if data.integration_time_us != 0:
+                # speed
+                speed_x = data.integrated_x/(1.0*data.integration_time_us/1e6)*data.distance
+                speed_y = data.integrated_y/(1.0*data.integration_time_us/1e6)*data.distance
 
-            # time of data capture
-            capture_time = data.header.stamp.secs + data.header.stamp.nsecs/1e9
-        '''
+                # time of data capture
+                capture_time = data.header.stamp.secs + data.header.stamp.nsecs/1e9
+            '''
 
 if __name__ == '__main__':
     rospy.init_node('flow')
     flow = FlowHandler()
     rospy.Subscriber("/px4flow/px4flow/raw/optical_flow_rad", OpticalFlowRad, flow.handle_optical_flow_rad)
     rospy.Subscriber("/mavros/global_position/compass_hdg", Float64, flow.handle_compass_hdg_rad)
+    # I thought to have all Transform publishers publish to the flow node
+    # which will handle all the transform requests with Lock()ing when needed.
+    # It's a work in progress.
+    #rospy.Subscriber("/tf_waypoint", TransformStamped, flow.handle_waypoint)
+    #rospy.Subscriber("/tf_waypoint_relative", TransformStamped, flow.handle_waypoint_relative)
     rospy.spin()
 

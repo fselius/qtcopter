@@ -102,7 +102,7 @@ if __name__=='__main__':
         if args.show:
             show_img(good_gains)
     elif args.alg == 'scan':
-        finder = ScanFind(True, 3)
+        finder = ScanFind(True, 5)
         for gain, frame in zip(gains, frames):
             if finder.find_target(frame)[0] is not None:
                 print 'gain:', gain, 'good!'

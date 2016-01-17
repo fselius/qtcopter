@@ -8,6 +8,7 @@ from .RosStateMachine import RosStateMachine
 from .FlyToMission import FlyToMission
 from .FlyToMissionFlow import FlyToMissionFlow
 from .FlyToBase import FlyToBase
+from .FlyToBaseFlow import FlyToBaseFlow
 from .SpiralSearch import SpiralSearch
 from .CenterAbove import CenterAbove
 

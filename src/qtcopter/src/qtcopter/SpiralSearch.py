@@ -80,6 +80,8 @@ class SpiralSearch:
 
             # dx, dy, dz = delta to destination
             ((dx, dy, dz), drot) = self.__listener.lookupTransform(self.__flow_frame, 'waypoint', rospy.Time(0))
+            # somewhere we multiply by minus one which screws us here. soo hack it back. yep, ugly.
+            dx, dy = -dx, -dy # HACK
 
             # previous t, x, y
             t = userdata.t_prev

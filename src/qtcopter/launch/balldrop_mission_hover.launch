@@ -17,7 +17,8 @@
     <!-- size: 1.5 -->
 
     <!-- Drop height in meters -->
-    drop_height: 2.0
+    <!-- drop_height: 2.0 -->
+    drop_height: 0.4
 
     <!-- Coarse find algo: distance, histogram, None otherwise (coarse returns whole picture) -->
     coarse_algorithm: None

@@ -2,7 +2,7 @@
 
 from qtcopter import DistanceFind
 from qtcopter import RosStateMachine as StateMachine
-from qtcopter import FlyToMissionFlow, FlyToBase
+from qtcopter import FlyToMissionFlow, FlyToBaseFlow
 from qtcopter import SpiralSearch, CenterAbove
 from qtcopter.balldrop import DescendToTarget, DropObject
 from qtcopter.balldrop import HistogramFind, PolarityFind, ScanFind
@@ -32,26 +32,47 @@ if __name__ == '__main__':
     #                               rospy.get_param('target/black_rings', 3),
     #                               rospy.get_param('target/threshold', 100))
     detailed_finder = ScanFind(rospy.get_param('target/center_black', True),
-                                   rospy.get_param('target/black_rings', 3),
+                                   # 5 is the number of rings (including middle circle)
+                                   # number of black rings is not 5..
+                                   5, #rospy.get_param('target/black_rings', 5),
                                    False)
 
-    #mission_position = rospy.get_param('mission_site/offset')
-    mission_position = None
+    mission_position = rospy.get_param('target/mission_site/offset')
+
+    # basic base_position relative to mission position
+    # this is instead of using GPS or accumulated flow
+    if mission_position is None:
+        base_position = None
+    else:
+        base_position = (-mission_position[0], -mission_position[1], 0.5)
 
     sm = StateMachine(states={
                           'Fly to mission site': FlyToMissionFlow(mission_position),
-                          'Center above target': CenterAbove(detailed_finder.find_target, infinite=True),
+                          'Spiral search for target': SpiralSearch(coarse_finder.find_roi_rects,
+                                                                   detailed_finder.find_target,
+                                                                   spiral_time=rospy.get_param('config/spiral/spiral_time'),
+                                                                   spiral_factor=rospy.get_param('config/spiral/spiral_factor')),
+                          'Center above target': CenterAbove(detailed_finder.find_target),
+                          'Descend to target': DescendToTarget(detailed_finder.find_target,
+                                                               drop_height=rospy.get_param('target/drop_height')),
+                          'Drop object on target': DropObject(),
+                          'Fly back to base': FlyToBaseFlow(base_position),
                       },
                       transitions={
                           'on way to mission site': 'Fly to mission site',
-                          #'mission site reached': 'Spiral search for target',
-                          'mission site reached': 'Center above target',
+                          'mission site reached': 'Spiral search for target',
+                          'continue spiraling': 'Spiral search for target',
+                          'found target': 'Center above target',
                           'moving above target': 'Center above target',
-                          'target lost': 'Center above target', # yeah, that's stupid. until we have SpiralSearch, we just retry.
-                          'centered above target': 'Center above target',
+                          'target lost': 'Spiral search for target',
+                          'centered above target': 'Descend to target',
+                          'drop height reached': 'Drop object on target',
+                          'object dropped': 'Fly back to base',
+                          'on way to base': 'Fly back to base',
                       },
                       #start='Center above target',
                       start='Fly to mission site',
-                      outcomes='') #'centered above target')
+                      #outcomes='') #'centered above target')
+                      outcomes='base reached')
     sm.execute()
     rospy.spin()

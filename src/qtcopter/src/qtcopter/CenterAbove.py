@@ -20,7 +20,7 @@ class CenterAbove:
 
         userdata.publish_debug_image(draw_circle, center, diameter)
 
-        # Get distance in meters
+        # Get distance in meters (from /height topic)
         offset = userdata.camera.get_ground_offset(center, userdata.height_msg.range)
 
         # if target near edge, move to edge

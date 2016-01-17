@@ -30,7 +30,7 @@ class Camera:
         ''' get_ground_offset - Get ground offset in meters from camera offset
                                 in pixels (pixels should be out of full size)
                                 from center.
-                camera_offset - pixel offset from center [pixels
+                camera_offset - pixel offset from center [pixels]
                 distance      - distance to ground
                 camera_corner_offset - whether camera offset is from the top left corner
         '''
@@ -41,6 +41,7 @@ class Camera:
 
         # http://answers.ros.org/question/119506
         (x, y, h) = np.dot(self.K_inv, (x, y, 1))*distance
+        x = -x
         return x/h, y/h
 
     def get_camera_offset(self, ground_offset, distance, camera_corner_offset=True):
@@ -67,7 +68,7 @@ class Camera:
         rospy.loginfo('Initializing camera {0} from ROS.'.format(camera_name))
         while True:
             try:
-                camera_info = rospy.wait_for_message('/camera/camera_info', CameraInfo, timeout=0.1)
+                camera_info = rospy.wait_for_message('/camera/camera_info', CameraInfo, timeout=1)
             except:
                 # timeout..
                 rospy.loginfo('Initializing.. camera {0} from ROS.'.format(camera_name))

@@ -29,4 +29,8 @@ px4flow:
   ranger_min_range: 0.3     # meters
   ranger_max_range: 5.0     # meters
 
+
+#param:
+#  IMAGE_L_LIGHT: 1.0 # low light
+
 # vim:set ts=2 sw=2 et:
