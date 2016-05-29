@@ -17,7 +17,16 @@ c.print_infos()
 c.start_capture()
 
 # init flow
-flow = Flow('/dev/ttyACM1')
+#flow = Flow('/dev/ttyACM1')
+flow = Flow(dummy=True)
+flow.listen()
+
+
+class Height:
+    def __call__(self):
+        return 1 # 1 meter
+# init height
+height = Height()
 
 # init target finder
 f = finder()
@@ -30,6 +39,12 @@ while True:
         # todo
         # X, Y = ..
         print 'Found target at', center, 'size:', size
-    print 'X: 
+        h = height()
+        x, y = center[0], center[1]
+        x *= 80/800.*h # 80 cm per 800 pixels at 1m? TODO: measure
+        y *= 60/600.*h # 60 cm per 600 pixels at 1m?
+
+        flow.set_xy(x, y)
+    print 'X=%2.2f Y=%2.2f' % (flow.X, flow.Y)
 
 

@@ -14,10 +14,11 @@ from mavros_extras.msg import OpticalFlowRad
 import pylab as pl
 import time
 import sys
+import threading
 
 
 class Flow:
-    def __init__(self, flow_serial='/dev/ttyACM0'):
+    def __init__(self, flow_serial='/dev/ttyACM0', dummy=False):
         self.flow_serial = flow_serial
         self.X = 0
         self.Y = 0
@@ -27,38 +28,67 @@ class Flow:
         self.p_x = []
         self.p_y = []
 
+        self.dummy = dummy
+
 
         # TODO: save "last 10s" measurements, see how many are good (not zero, quality > ?)
         self.last = []
         self.total = 0
         self.zero = 0
         self.total_int_time = 0
+
+        self.thread = None
+        self.thread_please_die = False
+    def __del__(self):
+        self.stop()
+
+    def lock(self):
+        # TODO: use this to lock self.X, self.Y -- atomically set them
+        pass
+    def unlock(self):
+        # TODO: use this to unlock self.X, self.Y -- atomically set them
+        pass
+    def set_xy(self, x, y):
+        self.lock()
+        self.X = x
+        self.Y = y
+        self.unlock()
     def callback(self, data):
         #global X, Y, last, total, zero, total_int_time
 
         #print data
-
+        self.lock()
         self.X += data.integrated_x*data.distance
         self.Y += data.integrated_y*data.distance
-        self.p_x.append(self.X)
-        self.p_y.append(self.Y)
-        print 'X:', self.X, 'Y:', self.Y
+        x = self.X
+        y = self.Y
+        self.unlock()
+
+        self.p_x.append(x)
+        self.p_y.append(y)
+        print 'flow callback: X:', x, 'Y:', y
         self.total += 1
         self.total_int_time += data.integration_time_us*1e6
 
-        '''
-        if data.integration_time_us != 0:
-            speed_x = data.integrated_x/(1.0*data.integration_time_us/1e6)*data.distance
-            speed_y = data.integrated_y/(1.0*data.integration_time_us/1e6)*data.distance
-            #p_time.append(data.header.stamp.secs+1.0*data.header.stamp.nsecs/10**9)
-            p_time.append(1.0*data.time_usec/1e6)
-            p_speed_x.append(speed_x)
-            p_speed_y.append(speed_y)
-            #print 'quality: %03d range: %+.3f speed: %+.5f %+.5f location: %f %f' % (data.quality, data.distance, speed_x, speed_y, X, Y)
+
+    def run(self):
+        if self.ros:
+            listener = self.listener
+        elif self.dummy:
+            listener = self.listener_dummy
         else:
-            zero += 1
-        #rospy.loginfo(rospy.get_caller_id() + "I heard %s", data.data)
-        '''
+            listener = self.listener_noros
+
+        # TODO: spawn thread
+        self.thread = threading.Thread(target=listener)
+        self.thread.run()
+
+    def stop(self):
+        self.thread_please_die = True
+        if self.thread and self.thread.isAlive():
+            self.thread.join(1)
+            if self.thread.isAlive():
+                print >> sys.stderr, "Flow(): thread could not be joined"
 
     def listener(self):
 
@@ -101,6 +131,7 @@ class Flow:
             #print x
             if int(time.time()) > last_print:
                 last_print = int(time.time())
+
 
 
 
