@@ -12,8 +12,6 @@ import cv
 import numpy as np
 import random
 import argparse
-from ptgrey import PTGreyCamera
-import flycapture2 as fc2
 from time import time
 
 def show_img(img, wait=True, title='bah'):
@@ -206,6 +204,8 @@ if __name__ == '__main__':
             else:
                 print 'could not find target'
     else:
+        from ptgrey import PTGreyCamera
+        import flycapture2 as fc2
         c = PTGreyCamera()
         # set manual values
         c.set_property_manual(fc2.AUTO_EXPOSURE, 0) # exposure = 0, we don't modify this. I'm not sure, but it had no effect.

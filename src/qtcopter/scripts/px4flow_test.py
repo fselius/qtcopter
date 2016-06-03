@@ -11,14 +11,14 @@ from std_msgs.msg import String
 from mavros_extras.msg import OpticalFlowRad
 '''
 
-import pylab as pl
 import time
+import random
 import sys
 import threading
 
 
 class Flow:
-    def __init__(self, flow_serial='/dev/ttyACM0', dummy=False):
+    def __init__(self, flow_serial='/dev/ttyACM0', ros=False, dummy=False):
         self.flow_serial = flow_serial
         self.X = 0
         self.Y = 0
@@ -29,6 +29,7 @@ class Flow:
         self.p_y = []
 
         self.dummy = dummy
+        self.ros = ros
 
 
         # TODO: save "last 10s" measurements, see how many are good (not zero, quality > ?)
@@ -66,22 +67,13 @@ class Flow:
 
         self.p_x.append(x)
         self.p_y.append(y)
-        print 'flow callback: X:', x, 'Y:', y
         self.total += 1
-        self.total_int_time += data.integration_time_us*1e6
+        self.total_int_time += data.integration_time_us/1e6
 
 
     def run(self):
-        if self.ros:
-            listener = self.listener
-        elif self.dummy:
-            listener = self.listener_dummy
-        else:
-            listener = self.listener_noros
-
-        # TODO: spawn thread
-        self.thread = threading.Thread(target=listener)
-        self.thread.run()
+        self.thread = threading.Thread(target=self.listener)
+        self.thread.start()
 
     def stop(self):
         self.thread_please_die = True
@@ -91,12 +83,13 @@ class Flow:
                 print >> sys.stderr, "Flow(): thread could not be joined"
 
     def listener(self):
-
-        # In ROS, nodes are uniquely named. If two nodes with the same
-        # node are launched, the previous one is kicked off. The
-        # anonymous=True flag means that rospy will choose a unique
-        # name for our 'talker' node so that multiple talkers can
-        # run simultaneously.
+        if self.ros:
+            return self.listener_ros()
+        elif self.dummy:
+            return self.listener_dummy()
+        else:
+            return self.listener_noros()
+    def listener_ros(self):
         print 'init node..'
         rospy.init_node('listener', anonymous=True)
         print 'subscribe..'
@@ -108,7 +101,7 @@ class Flow:
         t = time.time()
         rospy.spin()
         print 'run time:', time.time()-t
-        print 'int time:', 1.*total_int_time / 1e6
+        print 'int time:', 1.*total_int_time
 
     def listener_noros(self):
         import pymavlink.mavutil as mavutil
@@ -119,7 +112,7 @@ class Flow:
         last_print = 0
         self.sum_x = 0
         self.sum_y = 0
-        while True:
+        while not self.thread_please_die:
             #x = m.recv_msg()
             x = m.recv_match(type='OPTICAL_FLOW_RAD', blocking=True)
             if x is None:
@@ -131,19 +124,30 @@ class Flow:
             #print x
             if int(time.time()) > last_print:
                 last_print = int(time.time())
-
-
+    def listener_dummy(self):
+        delay = 1./40
+        class DummyData:
+            pass
+        while not self.thread_please_die:
+            time.sleep(delay)
+            data = DummyData()
+            data.distance = 1.5
+            data.integrated_x = random.random()*2-1
+            data.integrated_y = random.random()*2-1
+            data.integration_time_us = delay*1e6
+            self.callback(data)
 
 
 if __name__ == '__main__':
+    import pylab as pl
     try:
         if len(sys.argv) > 1:
             flow_serial = sys.argv[1]
         else:
             flow_serial = '/dev/ttyACM0'
         print 'Listening on', flow_serial
-        f = Flow(flow_serial)
-        f.listener_noros()
+        f = Flow(flow_serial, ros=False)
+        f.listener()
     except KeyboardInterrupt:
         pass
     if len(f.p_time) > 0:
