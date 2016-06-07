@@ -7,7 +7,8 @@ import random
 sys.path.append('../src/qtcopter/balldrop')
 sys.path.append('../src/qtcopter')
 from ransac_find import RANSACFind as finder
-#from ptgrey import PTGreyCamera
+from ptgrey import PTGreyCamera
+import flycapture2 as fc2
 
 class DummyPTGreyCamera:
     def set_property_manual(self, a, b):
@@ -20,26 +21,25 @@ class DummyPTGreyCamera:
         time.sleep(0.1)
         return None
 
-PTGreyCamera = DummyPTGreyCamera
 
 class DummyFinder:
     def find_target(self, img):
         time.sleep(0.1)
         return (random.random()*800-400, random.random()*600-300), 5
-finder = DummyFinder
+#finder = DummyFinder
 
 
+shutter = 10
+gain = 10
 # init camera
 c = PTGreyCamera()
-'''
 # set manual values
 c.set_property_manual(fc2.AUTO_EXPOSURE, 0) # exposure = 0, we don't modify this. I'm not sure, but it had no effect.
-c.set_property_manual(fc2.SHUTTER, args.shutter) # 10ms shutter (1/100, hopefully fast enough)
+c.set_property_manual(fc2.SHUTTER, shutter) # 10ms shutter (1/100, hopefully fast enough)
 # if frame_rate is too high, it is set to maximum :)
 c.set_property_manual(fc2.FRAME_RATE, 100) # maximum framerate
-c.set_property_manual(fc2.GAIN, args.gain)
+c.set_property_manual(fc2.GAIN, gain)
 c.print_infos()
-'''
 c.start_capture()
 
 # init flow
@@ -54,7 +54,7 @@ class Height:
 height = Height()
 
 # init target finder
-f = finder()
+f = finder(True, 3, True)
 
 try:
 
